@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module Architecture — How It Works</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Figtree:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* ── layout & surface ── */
+      --bg:          #07090f;
+      --surface:     #0c1018;
+      --surface-2:   #131824;
+      --surface-3:   #1a2235;
+      --text:        #e8f0fe;
+      --text-soft:   #8899b8;
+      --text-muted:  #3d4f70;
+      --border:      rgba(255,255,255,.06);
+      --border-soft: rgba(255,255,255,.04);
+      --danger:      #f87171;
+      --warn:        #fb923c;
+      --r:           14px;
+      --r-sm:        8px;
+      --font-head:   'Syne', sans-serif;
+      --font-body:   'Figtree', sans-serif;
+      --font-mono:   'IBM Plex Mono', monospace;
+
+      /* ── section A color (Blue) ── */
+      --a:     #38bdf8;
+      --a-mid: #0ea5e9;
+      --a-dim: rgba(56,189,248,.12);
+      --a-glow:rgba(56,189,248,.35);
+
+      /* ── section B color (Amber) ── */
+      --b:     #fbbf24;
+      --b-mid: #f59e0b;
+      --b-dim: rgba(251,191,36,.12);
+      --b-glow:rgba(251,191,36,.35);
+
+      /* ── section C color (Green) ── */
+      --c:     #34d399;
+      --c-mid: #10b981;
+      --c-dim: rgba(52,211,153,.12);
+      --c-glow:rgba(52,211,153,.35);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+    }
+
+    .ambient {
+      position: fixed; border-radius: 50%;
+      filter: blur(120px); pointer-events: none; z-index: 0;
+    }
+    .amb-a { width:600px; height:600px; top:-200px; left:-200px;  background: radial-gradient(circle, rgba(56,189,248,.06) 0%, transparent 70%); }
+    .amb-b { width:400px; height:400px; top:40%;   left:35%;      background: radial-gradient(circle, rgba(251,191,36,.06) 0%, transparent 70%); }
+    .amb-c { width:500px; height:500px; bottom:-150px; right:-100px; background: radial-gradient(circle, rgba(52,211,153,.06) 0%, transparent 70%); }
+
+    .wrapper {
+      position: relative; z-index: 1;
+      max-width: 1280px; margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    /* ── header ── */
+    .site-header {
+      padding: 60px 0 48px; text-align: center;
+      animation: riseIn .7s cubic-bezier(.22,1,.36,1) both;
+    }
+    .header-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em;
+      text-transform: uppercase; color: var(--text-soft);
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 100px; padding: 6px 14px; margin-bottom: 20px;
+    }
+    .live-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--c); box-shadow: 0 0 6px var(--c-glow);
+      animation: livePulse 2s ease-in-out infinite;
+    }
+    .site-header h1 {
+      font-family: var(--font-head); font-size: clamp(36px,6vw,72px);
+      font-weight: 800; letter-spacing: -.02em; line-height: 1;
+      background: linear-gradient(135deg, #e8f0fe 0%, var(--a) 45%, var(--c) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; margin-bottom: 16px;
+    }
+    .site-header p {
+      font-size: clamp(15px,2vw,18px); color: var(--text-soft);
+      font-weight: 400; max-width: 600px; margin: 0 auto; line-height: 1.6;
+    }
+
+    /* ── stats strip ── */
+    .stats-strip {
+      display: flex; flex-wrap: wrap; justify-content: center;
+      gap: 10px; margin: 40px 0 56px;
+      animation: riseIn .7s .12s cubic-bezier(.22,1,.36,1) both;
+    }
+    .stat-chip {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 100px; padding: 8px 18px;
+      font-family: var(--font-mono); font-size: 12px;
+    }
+    .stat-chip .sv { color: var(--text); font-weight: 500; }
+    .stat-chip .sl { color: var(--text-soft); }
+    .stat-chip .sd { width:5px; height:5px; border-radius:50%; }
+    .stat-chip:nth-child(1) .sd { background: var(--a); }
+    .stat-chip:nth-child(2) .sd { background: var(--b); }
+    .stat-chip:nth-child(3) .sd { background: var(--c); }
+    .stat-chip:nth-child(4) .sd { background: var(--warn); }
+
+    /* ── columns ── */
+    .columns {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px; align-items: start;
+    }
+    @media (max-width: 900px) { .columns { grid-template-columns: 1fr; } }
+
+    /* ── column card ── */
+    .col {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); overflow: hidden; position: relative;
+      opacity: 0; transform: translateY(32px);
+      transition: box-shadow .3s ease, transform .3s ease;
+    }
+    .col:hover { transform: translateY(-2px); }
+    .col.visible { animation: cardIn .65s cubic-bezier(.22,1,.36,1) both; }
+    .col:nth-child(1).visible { animation-delay: .1s; }
+    .col:nth-child(2).visible { animation-delay: .22s; }
+    .col:nth-child(3).visible { animation-delay: .34s; }
+
+    .col-bar { height: 3px; position: relative; z-index: 2; }
+    .col-a .col-bar { background: linear-gradient(90deg, var(--a-mid), var(--a)); }
+    .col-b .col-bar { background: linear-gradient(90deg, var(--b-mid), var(--b)); }
+    .col-c .col-bar { background: linear-gradient(90deg, var(--c-mid), var(--c)); }
+
+    .col-bg-num {
+      position: absolute; top: -10px; right: -5px;
+      font-family: var(--font-head); font-size: 160px; font-weight: 800;
+      line-height: 1; letter-spacing: -.04em;
+      pointer-events: none; user-select: none; opacity: .04;
+    }
+    .col-a .col-bg-num { color: var(--a); }
+    .col-b .col-bg-num { color: var(--b); }
+    .col-c .col-bg-num { color: var(--c); }
+
+    .col-inner { padding: 28px 28px 32px; position: relative; z-index: 1; }
+
+    /* ── col header ── */
+    .col-header {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; margin-bottom: 28px;
+    }
+    .col-badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      border-radius: 100px; padding: 5px 12px 5px 8px;
+      font-family: var(--font-mono); font-size: 10px;
+      font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+    }
+    .col-a .col-badge { background: var(--a-dim); color: var(--a); }
+    .col-b .col-badge { background: var(--b-dim); color: var(--b); }
+    .col-c .col-badge { background: var(--c-dim); color: var(--c); }
+    .badge-num {
+      width: 20px; height: 20px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700;
+    }
+    .col-a .badge-num { background: var(--a); color: #020a12; }
+    .col-b .badge-num { background: var(--b); color: #0d0800; }
+    .col-c .badge-num { background: var(--c); color: #011a0e; }
+
+    .live-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(52,211,153,.1); border: 1px solid rgba(52,211,153,.25);
+      border-radius: 100px; padding: 4px 10px;
+      font-family: var(--font-mono); font-size: 10px;
+      color: var(--c); letter-spacing: .1em;
+    }
+
+    .col-title {
+      font-family: var(--font-head); font-size: 26px;
+      font-weight: 800; letter-spacing: -.01em; margin-bottom: 6px;
+    }
+    .col-subtitle { font-size: 13px; color: var(--text-soft); line-height: 1.55; }
+
+    .col-divider { height: 1px; background: var(--border-soft); margin: 22px 0; }
+
+    /* ── step cards ── */
+    .steps { display: flex; flex-direction: column; gap: 12px; }
+    .step {
+      display: flex; gap: 14px; align-items: flex-start;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 14px 16px;
+    }
+    .step-icon {
+      width: 34px; height: 34px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 16px;
+      background: var(--a-dim);
+    }
+    .col-b .step-icon { background: var(--b-dim); }
+    .col-c .step-icon { background: var(--c-dim); }
+    .step-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .step-desc { font-size: 12px; color: var(--text-soft); line-height: 1.5; }
+
+    /* ── check rows ── */
+    .checks { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+    .check-row {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface-3); border-radius: var(--r-sm); padding: 9px 12px;
+    }
+    .check-icon {
+      width: 20px; height: 20px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0;
+    }
+    .ci-pass { background: rgba(52,211,153,.15); color: var(--c); }
+    .ci-fail { background: rgba(248,113,113,.15); color: var(--danger); }
+    .ci-warn { background: rgba(251,146,60,.15);  color: var(--warn); }
+    .ci-info { background: var(--a-dim);           color: var(--a); }
+    .check-text { font-size: 12px; color: var(--text-soft); }
+    .check-text strong { color: var(--text); font-weight: 500; }
+
+    /* ── inline flow divider ── */
+    .flow-arrow {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 0; font-family: var(--font-mono); font-size: 11px; color: var(--a);
+    }
+    .col-b .flow-arrow { color: var(--b); }
+    .col-c .flow-arrow { color: var(--c); }
+    .flow-arrow::before, .flow-arrow::after {
+      content: ''; flex: 1; height: 1px;
+    }
+    .col-a .flow-arrow::before { background: linear-gradient(90deg, transparent, var(--a-dim)); }
+    .col-a .flow-arrow::after  { background: linear-gradient(90deg, var(--a-dim), transparent); }
+    .col-b .flow-arrow::before { background: linear-gradient(90deg, transparent, var(--b-dim)); }
+    .col-b .flow-arrow::after  { background: linear-gradient(90deg, var(--b-dim), transparent); }
+    .col-c .flow-arrow::before { background: linear-gradient(90deg, transparent, var(--c-dim)); }
+    .col-c .flow-arrow::after  { background: linear-gradient(90deg, var(--c-dim), transparent); }
+
+    /* ── filter / numbered gate list ── */
+    .filters { display: flex; flex-direction: column; gap: 6px; }
+    .filter-row {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 10px 14px;
+      transition: background .2s;
+    }
+    .filter-row:hover { background: var(--surface-3); }
+    .filter-num {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--b-dim); color: var(--b);
+      font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .col-a .filter-num { background: var(--a-dim); color: var(--a); }
+    .col-c .filter-num { background: var(--c-dim); color: var(--c); }
+    .filter-text { flex: 1; font-size: 12.5px; color: var(--text); line-height: 1.4; }
+    .filter-sub  { font-size: 10.5px; color: var(--text-soft); display: block; margin-top: 1px; }
+    .filter-tag {
+      font-family: var(--font-mono); font-size: 9px; letter-spacing: .08em;
+      border-radius: 4px; padding: 2px 6px; flex-shrink: 0;
+    }
+    .tag-skip  { background: rgba(248,113,113,.1);  color: var(--danger); }
+    .tag-pass  { background: rgba(52,211,153,.1);   color: var(--c); }
+    .tag-error { background: rgba(251,146,60,.1);   color: var(--warn); }
+    .tag-info  { background: var(--a-dim);          color: var(--a); }
+
+    /* ── outcome cards ── */
+    .outcomes { display: flex; gap: 8px; margin-top: 14px; }
+    .outcome {
+      flex: 1; border-radius: var(--r-sm); padding: 12px 14px;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .outcome-pass { background: rgba(52,211,153,.08); border: 1px solid rgba(52,211,153,.2); }
+    .outcome-fail { background: rgba(248,113,113,.06); border: 1px solid rgba(248,113,133,.15); }
+    .outcome-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
+    .outcome-pass .outcome-label { color: var(--c); }
+    .outcome-fail .outcome-label { color: var(--danger); }
+    .outcome-desc { font-size: 11px; color: var(--text-soft); }
+
+    /* ── phase header ── */
+    .phase-title {
+      font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--text-soft); margin-bottom: 10px;
+    }
+    .phase { margin-bottom: 22px; }
+    .phase:last-child { margin-bottom: 0; }
+
+    /* ── exec flow ── */
+    .exec-flow { display: flex; flex-direction: column; gap: 6px; }
+    .exec-step {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 10px 14px;
+    }
+    .exec-icon {
+      width: 28px; height: 28px; border-radius: 6px;
+      background: var(--c-dim); display: flex;
+      align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;
+    }
+    .col-a .exec-icon { background: var(--a-dim); }
+    .col-b .exec-icon { background: var(--b-dim); }
+    .exec-name { font-size: 12.5px; color: var(--text); }
+    .exec-sub  { font-size: 11px; color: var(--text-soft); display: block; }
+
+    /* ── priority ladder ── */
+    .ladder { display: flex; flex-direction: column; gap: 7px; }
+    .ladder-row {
+      display: flex; align-items: center; gap: 12px;
+      border-radius: var(--r-sm); padding: 11px 14px; border-left: 3px solid;
+    }
+    .p1 { background: rgba(248,113,113,.07); border-color: var(--danger); }
+    .p2 { background: rgba(251,146,60,.07);  border-color: var(--warn); }
+    .p3 { background: var(--a-dim);          border-color: var(--a); }
+    .p4 { background: var(--b-dim);          border-color: var(--b); }
+    .p5 { background: var(--c-dim);          border-color: var(--c); }
+    .ladder-priority {
+      font-family: var(--font-mono); font-size: 9px; letter-spacing: .08em;
+      text-transform: uppercase; border-radius: 4px; padding: 2px 6px;
+      flex-shrink: 0; font-weight: 500;
+    }
+    .p3 .ladder-priority { background: var(--a-dim);  color: var(--a); }
+    .p4 .ladder-priority { background: var(--b-dim);  color: var(--b); }
+    .p5 .ladder-priority { background: var(--c-dim);  color: var(--c); }
+    .ladder-icon    { font-size: 16px; }
+    .ladder-trigger { font-size: 12.5px; color: var(--text); font-weight: 500; }
+    .ladder-action  { font-size: 11px; color: var(--text-soft); }
+
+    /* ── guardrail chips ── */
+    .guardrails { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
+    .guardrail {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 100px; padding: 5px 12px; font-size: 11.5px;
+    }
+    .gv { font-weight: 600; font-family: var(--font-mono); color: var(--c); }
+    .gl { color: var(--text-soft); }
+    .guardrail-alert {
+      width: 100%; justify-content: center;
+      background: rgba(248,113,113,.07); border: 1px solid rgba(248,113,113,.15);
+      border-radius: var(--r-sm); padding: 9px 14px;
+    }
+    .guardrail-alert .gv { color: var(--danger); }
+
+    /* ── animations ── */
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(32px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes livePulse {
+      0%, 100% { box-shadow: 0 0 4px var(--c-glow); }
+      50%       { box-shadow: 0 0 10px var(--c-glow), 0 0 18px rgba(52,211,153,.2); }
+    }
+
+    /* ── footer ── */
+    .site-footer {
+      text-align: center; padding: 48px 0 24px;
+      font-family: var(--font-mono); font-size: 11px;
+      color: var(--text-muted); letter-spacing: .06em;
+    }
+    ::-webkit-scrollbar { width: 6px; background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div class="ambient amb-a"></div>
+  <div class="ambient amb-b"></div>
+  <div class="ambient amb-c"></div>
+
+  <div class="wrapper">
+
+    <header class="site-header">
+      <div class="header-eyebrow">
+        <span class="live-dot"></span>
+        Terraform Module &middot; Hetzner Cloud + RKE2
+      </div>
+      <h1>Module Architecture</h1>
+      <p>Three composable sub-modules — networking, node-pool, and addons — wire together an HA RKE2 cluster on Hetzner in two ordered apply phases.</p>
+    </header>
+
+    <div class="stats-strip">
+      <div class="stat-chip"><span class="sd"></span><span class="sv">3</span><span class="sl">control plane nodes (HA etcd)</span></div>
+      <div class="stat-chip"><span class="sd"></span><span class="sv">2</span><span class="sl">apply phases</span></div>
+      <div class="stat-chip"><span class="sd"></span><span class="sv">11</span><span class="sl">optional add-ons</span></div>
+      <div class="stat-chip"><span class="sd"></span><span class="sv">15 min</span><span class="sl">cluster ready timeout</span></div>
+    </div>
+
+    <div class="columns">
+
+      <!-- ═══════════════════════════════════ -->
+      <!-- COLUMN A — Provision               -->
+      <!-- ═══════════════════════════════════ -->
+      <div class="col col-a">
+        <div class="col-bar"></div>
+        <div class="col-bg-num">01</div>
+        <div class="col-inner">
+          <div class="col-header">
+            <div class="col-badge"><span class="badge-num">1</span>Provision</div>
+          </div>
+          <div class="col-title">Infra &amp; Node<br>Pools</div>
+          <div class="col-subtitle">Phase 1 apply: networking and node-pool modules create all Hetzner resources before any Kubernetes provider is used.</div>
+          <div class="col-divider"></div>
+
+          <div class="phase">
+            <div class="phase-title">module.networking</div>
+            <div class="exec-flow">
+              <div class="exec-step">
+                <div class="exec-icon">🌐</div>
+                <div>
+                  <div class="exec-name">Private Network + Subnet</div>
+                  <span class="exec-sub">hcloud_network (default 10.0.0.0/8) + hcloud_network_subnet carved to cluster_subnet_cidr (default 10.11.0.0/16)</span>
+                </div>
+              </div>
+              <div class="exec-step">
+                <div class="exec-icon">⚖️</div>
+                <div>
+                  <div class="exec-name">Control Plane Load Balancer</div>
+                  <span class="exec-sub">lb11 LB with TCP health-checked services on :6443 (kube-api) and :9345 (RKE2 supervisor join endpoint)</span>
+                </div>
+              </div>
+              <div class="exec-step">
+                <div class="exec-icon">🔥</div>
+                <div>
+                  <div class="exec-name">Firewall (optional)</div>
+                  <span class="exec-sub">Blocks SSH by default; restricts etcd (:2379-2380), kubelet (:10250), RKE2 supervisor (:9345), and Cilium VXLAN (:8472 UDP) to cluster subnet only</span>
+                </div>
+              </div>
+              <div class="exec-step">
+                <div class="exec-icon">📐</div>
+                <div>
+                  <div class="exec-name">Spread Placement Group</div>
+                  <span class="exec-sub">Ensures the 3 CP nodes land on separate physical Hetzner hosts for failure isolation</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-arrow">passes IDs to node-pool</div>
+
+          <div class="phase">
+            <div class="phase-title">module.control_plane + module.worker_pools</div>
+            <div class="exec-flow">
+              <div class="exec-step">
+                <div class="exec-icon">🖥️</div>
+                <div>
+                  <div class="exec-name">hcloud_server (node-pool module)</div>
+                  <span class="exec-sub">Always 3 CP nodes; workers use for_each over var.node_pools for stable resource addresses when pools are added or removed</span>
+                </div>
+              </div>
+              <div class="exec-step">
+                <div class="exec-icon">📌</div>
+                <div>
+                  <div class="exec-name">Static IP for first CP node</div>
+                  <span class="exec-sub">local.first_cp_private_ip = cidrhost(cluster_subnet_cidr, 10) — assigned at plan time so worker cloud-inits can reference it without a circular dependency</span>
+                </div>
+              </div>
+              <div class="exec-step">
+                <div class="exec-icon">💾</div>
+                <div>
+                  <div class="exec-name">Longhorn block volumes (optional)</div>
+                  <span class="exec-sub">Per-pool hcloud_volume (ext4, automount=true) attached before cloud-init runs; size 0 skips creation and uses OS disk instead</span>
+                </div>
+              </div>
+              <div class="exec-step">
+                <div class="exec-icon">🔗</div>
+                <div>
+                  <div class="exec-name">LB target registration</div>
+                  <span class="exec-sub">CP nodes registered as hcloud_load_balancer_target via private IP; worker pools pass lb_id=null and are never registered</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-arrow">then wait_for_cluster</div>
+
+          <div class="phase">
+            <div class="phase-title">null_resource.wait_for_cluster</div>
+            <div class="checks">
+              <div class="check-row">
+                <div class="check-icon ci-info">⏳</div>
+                <div class="check-text"><strong>systemctl is-active rke2-server</strong> — polls every 10s until the service reports active</div>
+              </div>
+              <div class="check-row">
+                <div class="check-icon ci-info">📄</div>
+                <div class="check-text"><strong>/etc/rancher/rke2/rke2.yaml exists</strong> — confirms kubeconfig has been written by RKE2</div>
+              </div>
+              <div class="check-row">
+                <div class="check-icon ci-pass">✓</div>
+                <div class="check-text"><strong>kubectl get nodes returns 200</strong> — API server is reachable; 300s timeout</div>
+              </div>
+              <div class="check-row">
+                <div class="check-icon ci-pass">✓</div>
+                <div class="check-text"><strong>fetch_kubeconfig</strong> — SSHes to first CP, cat rke2.yaml, sed-replaces 127.0.0.1:6443 with LB IP, writes to .kube/&lt;cluster&gt;.yaml</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════ -->
+      <!-- COLUMN B — Bootstrap               -->
+      <!-- ═══════════════════════════════════ -->
+      <div class="col col-b">
+        <div class="col-bar"></div>
+        <div class="col-bg-num">02</div>
+        <div class="col-inner">
+          <div class="col-header">
+            <div class="col-badge"><span class="badge-num">2</span>Bootstrap</div>
+          </div>
+          <div class="col-title">Cloud-Init<br>Node Roles</div>
+          <div class="col-subtitle">Each node receives a rendered cloud-config at creation time; the template and variables differ by role and by position within the control plane pool.</div>
+          <div class="col-divider"></div>
+
+          <div class="phase">
+            <div class="phase-title">CP init node (count.index == 0)</div>
+            <div class="filters">
+              <div class="filter-row">
+                <div class="filter-num">1</div>
+                <div class="filter-text">
+                  Write /etc/rancher/rke2/config.yaml
+                  <span class="filter-sub">No <code>server:</code> line — this node initialises the cluster. Sets token, cloud-provider-name: external, cni: none, secrets-encryption: true, static node-ip, tls-san with LB IP</span>
+                </div>
+                <span class="filter-tag tag-info">INIT</span>
+              </div>
+              <div class="filter-row">
+                <div class="filter-num">2</div>
+                <div class="filter-text">
+                  curl get.rke2.io | INSTALL_RKE2_TYPE=server sh
+                  <span class="filter-sub">Pinned to var.rke2_version; installs the rke2-server systemd service</span>
+                </div>
+                <span class="filter-tag tag-pass">SERVER</span>
+              </div>
+              <div class="filter-row">
+                <div class="filter-num">3</div>
+                <div class="filter-text">
+                  systemctl enable + start rke2-server
+                  <span class="filter-sub">Bootstraps etcd, kube-apiserver, kube-controller-manager, kube-scheduler — all embedded in RKE2</span>
+                </div>
+                <span class="filter-tag tag-pass">LIVE</span>
+              </div>
+              <div class="filter-row">
+                <div class="filter-num">4</div>
+                <div class="filter-text">
+                  Poll until kubeconfig written
+                  <span class="filter-sub">timeout 300: waits for rke2-server active + /etc/rancher/rke2/rke2.yaml present</span>
+                </div>
+                <span class="filter-tag tag-pass">READY</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-arrow">then CP joiner nodes (index 1, 2)</div>
+
+          <div class="phase">
+            <div class="phase-title">CP joiner nodes (count.index &gt; 0)</div>
+            <div class="filters">
+              <div class="filter-row">
+                <div class="filter-num">1</div>
+                <div class="filter-text">
+                  server: https://&lt;first_cp_ip&gt;:9345
+                  <span class="filter-sub">Joins via the first CP's static private IP — not the LB — to avoid an LB health-check bootstrap race</span>
+                </div>
+                <span class="filter-tag tag-info">JOIN</span>
+              </div>
+              <div class="filter-row">
+                <div class="filter-num">2</div>
+                <div class="filter-text">
+                  Detect private NIC IP at runtime
+                  <span class="filter-sub">runcmd probes eth1 / ens10 and appends node-ip dynamically — DHCP means this can't be known at plan time</span>
+                </div>
+                <span class="filter-tag tag-pass">IP</span>
+              </div>
+              <div class="filter-row">
+                <div class="filter-num">3</div>
+                <div class="filter-text">
+                  INSTALL_RKE2_TYPE=server + systemctl start
+                  <span class="filter-sub">Same binary as init node; presence of server: line triggers join-mode instead of cluster-init</span>
+                </div>
+                <span class="filter-tag tag-pass">SERVER</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-arrow">and worker agent nodes</div>
+
+          <div class="phase">
+            <div class="phase-title">Worker agent nodes (role = agent)</div>
+            <div class="filters">
+              <div class="filter-row">
+                <div class="filter-num">1</div>
+                <div class="filter-text">
+                  server: https://&lt;control_plane_lb_ip&gt;:9345
+                  <span class="filter-sub">Workers join via the LB (not the first CP directly) so any healthy CP can service the join request</span>
+                </div>
+                <span class="filter-tag tag-info">LB</span>
+              </div>
+              <div class="filter-row">
+                <div class="filter-num">2</div>
+                <div class="filter-text">
+                  INSTALL_RKE2_TYPE=agent + rke2-agent.service
+                  <span class="filter-sub">Runs only the kubelet and kube-proxy; no etcd, no API server</span>
+                </div>
+                <span class="filter-tag tag-pass">AGENT</span>
+              </div>
+              <div class="filter-row">
+                <div class="filter-num">3</div>
+                <div class="filter-text">
+                  Longhorn volume mount (conditional)
+                  <span class="filter-sub">If longhorn_volume_size &gt; 0: waits for scsi-0HC_Volume_* device, mkfs.ext4 if unformatted, mounts to /mnt/longhorn, adds nofail fstab entry</span>
+                </div>
+                <span class="filter-tag tag-info">DISK</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-arrow">shared by all node types</div>
+
+          <div class="phase">
+            <div class="phase-title">Shared cloud-init steps</div>
+            <div class="checks">
+              <div class="check-row">
+                <div class="check-icon ci-info">🔐</div>
+                <div class="check-text"><strong>Tailscale install (optional)</strong> — ephemeral key, --accept-routes; keyed by enable_tailscale_nodes; allows VPN-mesh SSH without public IPs</div>
+              </div>
+              <div class="check-row">
+                <div class="check-icon ci-warn">⚠</div>
+                <div class="check-text"><strong>Log scrub</strong> — truncates cloud-init-output.log and cloud-init.log after 10s to remove the rke2_token from disk</div>
+              </div>
+              <div class="check-row">
+                <div class="check-icon ci-pass">✓</div>
+                <div class="check-text"><strong>lifecycle.ignore_changes = [user_data]</strong> — prevents Terraform from replacing nodes if cloud-init changes after initial creation</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════ -->
+      <!-- COLUMN C — Deploy Add-ons          -->
+      <!-- ═══════════════════════════════════ -->
+      <div class="col col-c">
+        <div class="col-bar"></div>
+        <div class="col-bg-num">03</div>
+        <div class="col-inner">
+          <div class="col-header">
+            <div class="col-badge"><span class="badge-num">3</span>Deploy</div>
+            <span class="live-badge"><span class="live-dot"></span>Phase 2</span>
+          </div>
+          <div class="col-title">Add-ons via<br>Helm</div>
+          <div class="col-subtitle">Phase 2 apply: module.addons targets a live cluster using the fetched kubeconfig; each add-on is behind a feature flag and implemented in its own .tf file.</div>
+          <div class="col-divider"></div>
+
+          <div class="phase">
+            <div class="phase-title">Two-phase apply requirement</div>
+            <div class="checks">
+              <div class="check-row">
+                <div class="check-icon ci-warn">!</div>
+                <div class="check-text"><strong>Phase 1 target</strong> — <code>terraform apply -target=module.control_plane -target=module.worker_pools -target=null_resource.wait_for_cluster</code></div>
+              </div>
+              <div class="check-row">
+                <div class="check-icon ci-pass">✓</div>
+                <div class="check-text"><strong>Phase 2 full apply</strong> — Helm + Kubernetes providers are now configured with the written kubeconfig; module.addons has <code>depends_on = [null_resource.fetch_kubeconfig]</code></div>
+              </div>
+              <div class="check-row">
+                <div class="check-icon ci-info">ℹ</div>
+                <div class="check-text"><strong>Provider config lives in examples/</strong> — the addons module itself only declares required_providers; the calling root module wires the kubeconfig path into both Helm and Kubernetes provider blocks</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-arrow">always-on add-ons</div>
+
+          <div class="phase">
+            <div class="phase-title">Always deployed</div>
+            <div class="steps">
+              <div class="step">
+                <div class="step-icon">🔵</div>
+                <div>
+                  <div class="step-name">Cilium CNI (cilium.tf)</div>
+                  <div class="step-desc">Deployed unconditionally — RKE2 is started with <code>cni: none</code> so Canal is disabled. VXLAN tunnel, MTU 1400 (Hetzner 1500 − 50 overhead), cluster-pool IPAM (/24 per node), kubeProxyReplacement="false" for CCM compatibility. Also applies a CiliumClusterwideNetworkPolicy blocking egress to 169.254.169.254 (Hetzner metadata API).</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-arrow">optional add-ons (feature-flagged)</div>
+
+          <div class="phase">
+            <div class="phase-title">Hetzner integrations</div>
+            <div class="ladder">
+              <div class="ladder-row p3">
+                <span class="ladder-priority">CCM · default on</span>
+                <span class="ladder-icon">☁️</span>
+                <div>
+                  <div class="ladder-trigger">Hetzner Cloud Controller Manager</div>
+                  <div class="ladder-action">Provisions Hetzner LBs for LoadBalancer Services; sets correct node InternalIP via private network</div>
+                </div>
+              </div>
+              <div class="ladder-row p4">
+                <span class="ladder-priority">CSI · default on</span>
+                <span class="ladder-icon">💿</span>
+                <div>
+                  <div class="ladder-trigger">Hetzner CSI Driver</div>
+                  <div class="ladder-action">Enables PersistentVolumeClaims backed by Hetzner block volumes</div>
+                </div>
+              </div>
+              <div class="ladder-row p5">
+                <span class="ladder-priority">Autoscaler · opt-in</span>
+                <span class="ladder-icon">📈</span>
+                <div>
+                  <div class="ladder-trigger">Cluster Autoscaler (HCLOUD_CLUSTER_CONFIG)</div>
+                  <div class="ladder-action">Cloud-inits for autoscaled pools are pre-rendered in locals.tf and passed as base64 node group config; autoscaler provisions/deletes nodes using Hetzner API</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-arrow">platform add-ons</div>
+
+          <div class="phase">
+            <div class="phase-title">Platform &amp; GitOps add-ons</div>
+            <div class="ladder">
+              <div class="ladder-row p3">
+                <span class="ladder-priority">Longhorn · opt-in</span>
+                <span class="ladder-icon">🗄️</span>
+                <div>
+                  <div class="ladder-trigger">Longhorn distributed storage</div>
+                  <div class="ladder-action">Replica count = min(total_worker_nodes, 3); RWX mode: builtin share-manager or external NFS</div>
+                </div>
+              </div>
+              <div class="ladder-row p4">
+                <span class="ladder-priority">Ingress · opt-in</span>
+                <span class="ladder-icon">🔀</span>
+                <div>
+                  <div class="ladder-trigger">Traefik (+ Gateway API CRDs) or NGINX</div>
+                  <div class="ladder-action">Selectable via ingress_type; Traefik installs v3 + Gateway API CRDs for HTTPRoute support</div>
+                </div>
+              </div>
+              <div class="ladder-row p5">
+                <span class="ladder-priority">Flux · opt-in</span>
+                <span class="ladder-icon">🔄</span>
+                <div>
+                  <div class="ladder-trigger">Flux CD bootstrap</div>
+                  <div class="ladder-action">flux_deploy_key_mode=auto generates SSH keypair + registers via GitHub API; mode=manual uses pre-registered key</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-arrow">observability &amp; security</div>
+
+          <div class="phase">
+            <div class="phase-title">Observability &amp; security</div>
+            <div class="steps">
+              <div class="step">
+                <div class="step-icon">📊</div>
+                <div>
+                  <div class="step-name">kube-prometheus-stack (monitoring.tf)</div>
+                  <div class="step-desc">Prometheus + Alertmanager + Grafana; Grafana hostname wired through external-dns + cert-manager if both are enabled.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-icon">🔒</div>
+                <div>
+                  <div class="step-name">cert-manager + External-DNS (cert_manager.tf / external_dns.tf)</div>
+                  <div class="step-desc">cert-manager uses Cloudflare DNS-01 ClusterIssuer. External-DNS deploys two separate controllers: one for proxied records and one for DNS-only records.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-icon">🛡️</div>
+                <div>
+                  <div class="step-name">Tailscale operator (tailscale.tf)</div>
+                  <div class="step-desc">Separate operator auth key (tag:k8s-operator) distinct from the node-level Tailscale auth key (tag:k8s-node) used in cloud-init.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-arrow">per-component tokens</div>
+
+          <div class="phase">
+            <div class="phase-title">Least-privilege token design</div>
+            <div class="guardrails">
+              <div class="guardrail"><span class="gv">hcloud_ccm_token</span><span class="gl">scoped to CCM</span></div>
+              <div class="guardrail"><span class="gv">hcloud_csi_token</span><span class="gl">scoped to CSI</span></div>
+              <div class="guardrail"><span class="gv">hcloud_autoscaler_token</span><span class="gl">scoped to autoscaler</span></div>
+              <div class="guardrail guardrail-alert"><span class="gv">hcloud_token fallback</span><span class="gl">— all three default to the root token if component-specific tokens are null</span></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- end .columns -->
+
+    <footer class="site-footer">terraform-hcloud-rke2-cluster &middot; networking + node-pool + addons &middot; RKE2 v1.32</footer>
+
+  </div>
+
+  <script>
+    const cols = document.querySelectorAll('.col');
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+    }, { threshold: 0.08 });
+    cols.forEach(c => io.observe(c));
+
+    // stagger .filter-row and .ladder-row children on column enter
+    document.querySelectorAll('.col').forEach(col => {
+      const colIo = new IntersectionObserver(entries => {
+        if (!entries[0].isIntersecting) return;
+        col.querySelectorAll('.filter-row').forEach((r, i) => {
+          r.style.cssText = 'opacity:0;transform:translateX(-10px);transition:opacity .35s ease,transform .35s ease';
+          setTimeout(() => r.style.cssText += ';opacity:1;transform:translateX(0)', 300 + i * 60);
+        });
+        col.querySelectorAll('.ladder-row').forEach((r, i) => {
+          r.style.cssText = 'opacity:0;transform:translateX(10px);transition:opacity .35s ease,transform .35s ease';
+          setTimeout(() => r.style.cssText += ';opacity:1;transform:translateX(0)', 350 + i * 90);
+        });
+        colIo.unobserve(col);
+      }, { threshold: 0.15 });
+      colIo.observe(col);
+    });
+  </script>
+</body>
+</html>

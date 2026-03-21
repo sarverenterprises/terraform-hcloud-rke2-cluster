@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cluster Add-ons — How It Works</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Figtree:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* ── layout & surface ── */
+      --bg:          #07090f;
+      --surface:     #0c1018;
+      --surface-2:   #131824;
+      --surface-3:   #1a2235;
+      --text:        #e8f0fe;
+      --text-soft:   #8899b8;
+      --text-muted:  #3d4f70;
+      --border:      rgba(255,255,255,.06);
+      --border-soft: rgba(255,255,255,.04);
+      --danger:      #f87171;
+      --warn:        #fb923c;
+      --r:           14px;
+      --r-sm:        8px;
+      --font-head:   'Syne', sans-serif;
+      --font-body:   'Figtree', sans-serif;
+      --font-mono:   'IBM Plex Mono', monospace;
+
+      /* ── section A color (Network) ── */
+      --a:     #38bdf8;
+      --a-mid: #0ea5e9;
+      --a-dim: rgba(56,189,248,.12);
+      --a-glow:rgba(56,189,248,.35);
+
+      /* ── section B color (Storage & Scale) ── */
+      --b:     #fbbf24;
+      --b-mid: #f59e0b;
+      --b-dim: rgba(251,191,36,.12);
+      --b-glow:rgba(251,191,36,.35);
+
+      /* ── section C color (Platform) ── */
+      --c:     #34d399;
+      --c-mid: #10b981;
+      --c-dim: rgba(52,211,153,.12);
+      --c-glow:rgba(52,211,153,.35);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+    }
+
+    .ambient {
+      position: fixed; border-radius: 50%;
+      filter: blur(120px); pointer-events: none; z-index: 0;
+    }
+    .amb-a { width:600px; height:600px; top:-200px; left:-200px;  background: radial-gradient(circle, rgba(56,189,248,.06) 0%, transparent 70%); }
+    .amb-b { width:400px; height:400px; top:40%;   left:35%;      background: radial-gradient(circle, rgba(251,191,36,.06) 0%, transparent 70%); }
+    .amb-c { width:500px; height:500px; bottom:-150px; right:-100px; background: radial-gradient(circle, rgba(52,211,153,.06) 0%, transparent 70%); }
+
+    .wrapper {
+      position: relative; z-index: 1;
+      max-width: 1280px; margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    /* ── header ── */
+    .site-header {
+      padding: 60px 0 48px; text-align: center;
+      animation: riseIn .7s cubic-bezier(.22,1,.36,1) both;
+    }
+    .header-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em;
+      text-transform: uppercase; color: var(--text-soft);
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 100px; padding: 6px 14px; margin-bottom: 20px;
+    }
+    .live-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--c); box-shadow: 0 0 6px var(--c-glow);
+      animation: livePulse 2s ease-in-out infinite;
+    }
+    .site-header h1 {
+      font-family: var(--font-head); font-size: clamp(36px,6vw,72px);
+      font-weight: 800; letter-spacing: -.02em; line-height: 1;
+      background: linear-gradient(135deg, #e8f0fe 0%, var(--a) 45%, var(--c) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; margin-bottom: 16px;
+    }
+    .site-header p {
+      font-size: clamp(15px,2vw,18px); color: var(--text-soft);
+      font-weight: 400; max-width: 620px; margin: 0 auto; line-height: 1.6;
+    }
+
+    /* ── stats strip ── */
+    .stats-strip {
+      display: flex; flex-wrap: wrap; justify-content: center;
+      gap: 10px; margin: 40px 0 56px;
+      animation: riseIn .7s .12s cubic-bezier(.22,1,.36,1) both;
+    }
+    .stat-chip {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 100px; padding: 8px 18px;
+      font-family: var(--font-mono); font-size: 12px;
+    }
+    .stat-chip .sv { color: var(--text); font-weight: 500; }
+    .stat-chip .sl { color: var(--text-soft); }
+    .stat-chip .sd { width:5px; height:5px; border-radius:50%; }
+    .stat-chip:nth-child(1) .sd { background: var(--a); }
+    .stat-chip:nth-child(2) .sd { background: var(--b); }
+    .stat-chip:nth-child(3) .sd { background: var(--c); }
+    .stat-chip:nth-child(4) .sd { background: var(--warn); }
+
+    /* ── columns ── */
+    .columns {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px; align-items: start;
+    }
+    @media (max-width: 900px) { .columns { grid-template-columns: 1fr; } }
+
+    /* ── column card ── */
+    .col {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); overflow: hidden; position: relative;
+      opacity: 0; transform: translateY(32px);
+      transition: box-shadow .3s ease, transform .3s ease;
+    }
+    .col:hover { transform: translateY(-2px); }
+    .col.visible { animation: cardIn .65s cubic-bezier(.22,1,.36,1) both; }
+    .col:nth-child(1).visible { animation-delay: .1s; }
+    .col:nth-child(2).visible { animation-delay: .22s; }
+    .col:nth-child(3).visible { animation-delay: .34s; }
+
+    .col-bar { height: 3px; position: relative; z-index: 2; }
+    .col-a .col-bar { background: linear-gradient(90deg, var(--a-mid), var(--a)); }
+    .col-b .col-bar { background: linear-gradient(90deg, var(--b-mid), var(--b)); }
+    .col-c .col-bar { background: linear-gradient(90deg, var(--c-mid), var(--c)); }
+
+    .col-bg-num {
+      position: absolute; top: -10px; right: -5px;
+      font-family: var(--font-head); font-size: 160px; font-weight: 800;
+      line-height: 1; letter-spacing: -.04em;
+      pointer-events: none; user-select: none; opacity: .04;
+    }
+    .col-a .col-bg-num { color: var(--a); }
+    .col-b .col-bg-num { color: var(--b); }
+    .col-c .col-bg-num { color: var(--c); }
+
+    .col-inner { padding: 28px 28px 32px; position: relative; z-index: 1; }
+
+    /* ── col header ── */
+    .col-header {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; margin-bottom: 28px;
+    }
+    .col-badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      border-radius: 100px; padding: 5px 12px 5px 8px;
+      font-family: var(--font-mono); font-size: 10px;
+      font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+    }
+    .col-a .col-badge { background: var(--a-dim); color: var(--a); }
+    .col-b .col-badge { background: var(--b-dim); color: var(--b); }
+    .col-c .col-badge { background: var(--c-dim); color: var(--c); }
+    .badge-num {
+      width: 20px; height: 20px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700;
+    }
+    .col-a .badge-num { background: var(--a); color: #020a12; }
+    .col-b .badge-num { background: var(--b); color: #0d0800; }
+    .col-c .badge-num { background: var(--c); color: #011a0e; }
+
+    .live-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(52,211,153,.1); border: 1px solid rgba(52,211,153,.25);
+      border-radius: 100px; padding: 4px 10px;
+      font-family: var(--font-mono); font-size: 10px;
+      color: var(--c); letter-spacing: .1em;
+    }
+
+    .col-title {
+      font-family: var(--font-head); font-size: 26px;
+      font-weight: 800; letter-spacing: -.01em; margin-bottom: 6px;
+    }
+    .col-subtitle { font-size: 13px; color: var(--text-soft); line-height: 1.55; }
+
+    .col-divider { height: 1px; background: var(--border-soft); margin: 22px 0; }
+
+    /* ── step cards ── */
+    .steps { display: flex; flex-direction: column; gap: 12px; }
+    .step {
+      display: flex; gap: 14px; align-items: flex-start;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 14px 16px;
+    }
+    .step-icon {
+      width: 34px; height: 34px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 16px;
+      background: var(--a-dim);
+    }
+    .col-b .step-icon { background: var(--b-dim); }
+    .col-c .step-icon { background: var(--c-dim); }
+    .step-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .step-desc { font-size: 12px; color: var(--text-soft); line-height: 1.5; }
+
+    /* ── check rows (yes/no fact checks) ── */
+    .checks { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+    .check-row {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface-3); border-radius: var(--r-sm); padding: 9px 12px;
+    }
+    .check-icon {
+      width: 20px; height: 20px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0;
+    }
+    .ci-pass { background: rgba(52,211,153,.15); color: var(--c); }
+    .ci-fail { background: rgba(248,113,113,.15); color: var(--danger); }
+    .ci-warn { background: rgba(251,146,60,.15);  color: var(--warn); }
+    .ci-info { background: var(--a-dim);           color: var(--a); }
+    .check-text { font-size: 12px; color: var(--text-soft); }
+    .check-text strong { color: var(--text); font-weight: 500; }
+
+    /* ── inline flow divider ── */
+    .flow-arrow {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 0; font-family: var(--font-mono); font-size: 11px; color: var(--a);
+    }
+    .col-b .flow-arrow { color: var(--b); }
+    .col-c .flow-arrow { color: var(--c); }
+    .flow-arrow::before, .flow-arrow::after {
+      content: ''; flex: 1; height: 1px;
+    }
+    .col-a .flow-arrow::before { background: linear-gradient(90deg, transparent, var(--a-dim)); }
+    .col-a .flow-arrow::after  { background: linear-gradient(90deg, var(--a-dim), transparent); }
+    .col-b .flow-arrow::before { background: linear-gradient(90deg, transparent, var(--b-dim)); }
+    .col-b .flow-arrow::after  { background: linear-gradient(90deg, var(--b-dim), transparent); }
+    .col-c .flow-arrow::before { background: linear-gradient(90deg, transparent, var(--c-dim)); }
+    .col-c .flow-arrow::after  { background: linear-gradient(90deg, var(--c-dim), transparent); }
+
+    /* ── filter / numbered gate list ── */
+    .filters { display: flex; flex-direction: column; gap: 6px; }
+    .filter-row {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 10px 14px;
+      transition: background .2s;
+    }
+    .filter-row:hover { background: var(--surface-3); }
+    .filter-num {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--b-dim); color: var(--b);
+      font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .col-a .filter-num { background: var(--a-dim); color: var(--a); }
+    .col-c .filter-num { background: var(--c-dim); color: var(--c); }
+    .filter-text { flex: 1; font-size: 12.5px; color: var(--text); line-height: 1.4; }
+    .filter-sub  { font-size: 10.5px; color: var(--text-soft); display: block; margin-top: 1px; }
+    .filter-tag {
+      font-family: var(--font-mono); font-size: 9px; letter-spacing: .08em;
+      border-radius: 4px; padding: 2px 6px; flex-shrink: 0;
+    }
+    .tag-skip  { background: rgba(248,113,113,.1);  color: var(--danger); }
+    .tag-pass  { background: rgba(52,211,153,.1);   color: var(--c); }
+    .tag-error { background: rgba(251,146,60,.1);   color: var(--warn); }
+    .tag-info  { background: var(--a-dim);           color: var(--a); }
+
+    /* ── outcome cards (pass/fail summary) ── */
+    .outcomes { display: flex; gap: 8px; margin-top: 14px; }
+    .outcome {
+      flex: 1; border-radius: var(--r-sm); padding: 12px 14px;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .outcome-pass { background: rgba(52,211,153,.08); border: 1px solid rgba(52,211,153,.2); }
+    .outcome-fail { background: rgba(248,113,113,.06); border: 1px solid rgba(248,113,133,.15); }
+    .outcome-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
+    .outcome-pass .outcome-label { color: var(--c); }
+    .outcome-fail .outcome-label { color: var(--danger); }
+    .outcome-desc { font-size: 11px; color: var(--text-soft); }
+
+    /* ── phase header (sub-section within column) ── */
+    .phase-title {
+      font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--text-soft); margin-bottom: 10px;
+    }
+    .phase { margin-bottom: 22px; }
+    .phase:last-child { margin-bottom: 0; }
+
+    /* ── exec flow (compact numbered steps) ── */
+    .exec-flow { display: flex; flex-direction: column; gap: 6px; }
+    .exec-step {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 10px 14px;
+    }
+    .exec-icon {
+      width: 28px; height: 28px; border-radius: 6px;
+      background: var(--c-dim); display: flex;
+      align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;
+    }
+    .col-a .exec-icon { background: var(--a-dim); }
+    .col-b .exec-icon { background: var(--b-dim); }
+    .exec-name { font-size: 12.5px; color: var(--text); }
+    .exec-sub  { font-size: 11px; color: var(--text-soft); display: block; }
+
+    /* ── priority ladder (escalation or exit priority) ── */
+    .ladder { display: flex; flex-direction: column; gap: 7px; }
+    .ladder-row {
+      display: flex; align-items: center; gap: 12px;
+      border-radius: var(--r-sm); padding: 11px 14px; border-left: 3px solid;
+    }
+    .p1 { background: rgba(248,113,113,.07); border-color: var(--danger); }
+    .p2 { background: rgba(251,146,60,.07);  border-color: var(--warn); }
+    .p3 { background: var(--a-dim);          border-color: var(--a); }
+    .p4 { background: var(--b-dim);          border-color: var(--b); }
+    .p5 { background: var(--c-dim);          border-color: var(--c); }
+    .ladder-priority {
+      font-family: var(--font-mono); font-size: 9px; letter-spacing: .08em;
+      text-transform: uppercase; border-radius: 4px; padding: 2px 6px;
+      flex-shrink: 0; font-weight: 500;
+    }
+    .p1 .ladder-priority { background: rgba(248,113,113,.15); color: var(--danger); }
+    .p2 .ladder-priority { background: rgba(251,146,60,.15);  color: var(--warn); }
+    .p3 .ladder-priority { background: var(--a-dim);          color: var(--a); }
+    .p4 .ladder-priority { background: var(--b-dim);          color: var(--b); }
+    .p5 .ladder-priority { background: var(--c-dim);          color: var(--c); }
+    .ladder-icon    { font-size: 16px; }
+    .ladder-trigger { font-size: 12.5px; color: var(--text); font-weight: 500; }
+    .ladder-action  { font-size: 11px; color: var(--text-soft); }
+
+    /* ── guardrail chips (hard limits / constraints) ── */
+    .guardrails { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
+    .guardrail {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 100px; padding: 5px 12px; font-size: 11.5px;
+    }
+    .gv { font-weight: 600; font-family: var(--font-mono); color: var(--c); }
+    .gl { color: var(--text-soft); }
+    .guardrail-alert {
+      width: 100%; justify-content: center;
+      background: rgba(248,113,113,.07); border: 1px solid rgba(248,113,113,.15);
+      border-radius: var(--r-sm); padding: 9px 14px;
+    }
+    .guardrail-alert .gv { color: var(--danger); }
+
+    /* ── animations ── */
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(32px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes livePulse {
+      0%, 100% { box-shadow: 0 0 4px var(--c-glow); }
+      50%       { box-shadow: 0 0 10px var(--c-glow), 0 0 18px rgba(52,211,153,.2); }
+    }
+
+    /* ── footer ── */
+    .site-footer {
+      text-align: center; padding: 48px 0 24px;
+      font-family: var(--font-mono); font-size: 11px;
+      color: var(--text-muted); letter-spacing: .06em;
+    }
+    ::-webkit-scrollbar { width: 6px; background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div class="ambient amb-a"></div>
+  <div class="ambient amb-b"></div>
+  <div class="ambient amb-c"></div>
+
+  <div class="wrapper">
+
+    <header class="site-header">
+      <div class="header-eyebrow">
+        <span class="live-dot"></span>
+        Terraform &middot; RKE2 on Hetzner Cloud
+      </div>
+      <h1>Cluster Add-ons</h1>
+      <p>Every optional feature the module can deploy — what enables it, what it depends on, and how the pieces connect into a production-grade cluster.</p>
+    </header>
+
+    <div class="stats-strip">
+      <div class="stat-chip"><span class="sd"></span><span class="sv">11</span><span class="sl">deployable add-ons</span></div>
+      <div class="stat-chip"><span class="sd"></span><span class="sv">enable_*</span><span class="sl">feature flag per add-on</span></div>
+      <div class="stat-chip"><span class="sd"></span><span class="sv">3</span><span class="sl">Cloudflare integrations</span></div>
+      <div class="stat-chip"><span class="sd"></span><span class="sv">RSA-4096</span><span class="sl">Flux SSH deploy key</span></div>
+    </div>
+
+    <div class="columns">
+
+      <!-- ═══════════════════════════════════ -->
+      <!-- COLUMN A — Network                 -->
+      <!-- ═══════════════════════════════════ -->
+      <div class="col col-a">
+        <div class="col-bar"></div>
+        <div class="col-bg-num">01</div>
+        <div class="col-inner">
+          <div class="col-header">
+            <div class="col-badge"><span class="badge-num">1</span>Network</div>
+            <span class="live-badge"><span class="live-dot"></span>Always On</span>
+          </div>
+          <div class="col-title">The Traffic<br>Layer</div>
+          <div class="col-subtitle">From pod-to-pod packets to public HTTPS — four add-ons that handle every hop traffic makes into or through the cluster.</div>
+          <div class="col-divider"></div>
+
+          <!-- Cilium -->
+          <div class="phase">
+            <div class="phase-title">Cilium CNI — always deployed</div>
+            <div class="steps">
+              <div class="step">
+                <div class="step-icon">🔷</div>
+                <div>
+                  <div class="step-name">eBPF networking — no flag needed</div>
+                  <div class="step-desc">Cilium is unconditional. RKE2 is configured with <code style="font-family:var(--font-mono);font-size:11px;color:var(--a)">cni: none</code> so Canal is disabled; Cilium takes its place. VXLAN tunnel mode with MTU 1400 (1500 Hetzner NIC minus 50 bytes encapsulation overhead) prevents silent fragmentation on private networks.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-icon">🛡️</div>
+                <div>
+                  <div class="step-name">Metadata API blocked cluster-wide</div>
+                  <div class="step-desc">A <code style="font-family:var(--font-mono);font-size:11px;color:var(--a)">CiliumClusterwideNetworkPolicy</code> denies all pod egress to <code style="font-family:var(--font-mono);font-size:11px;color:var(--a)">169.254.169.254</code>, preventing workloads from reading Hetzner instance credentials or enumerating node metadata.</div>
+                </div>
+              </div>
+            </div>
+            <div class="checks" style="margin-top:10px;">
+              <div class="check-row">
+                <div class="check-icon ci-info">ℹ</div>
+                <div class="check-text"><strong>kubeProxyReplacement = "false" (string)</strong> — full replacement breaks hcloud-ccm LoadBalancer reconciliation (rancher/rke2#4862). Must be a string, not a boolean.</div>
+              </div>
+              <div class="check-row">
+                <div class="check-icon ci-info">ℹ</div>
+                <div class="check-text"><strong>operator.replicas = 2</strong> — a single Cilium Operator is a SPOF for IPAM; two replicas with leader election provide HA.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-arrow">builds on Cilium</div>
+
+          <!-- External-DNS -->
+          <div class="phase">
+            <div class="phase-title">External-DNS — enable_external_dns</div>
+            <div class="filters">
+              <div class="filter-row">
+                <div class="filter-num">1</div>
+                <div class="filter-text">
+                  external-dns-proxied
+                  <span class="filter-sub">annotationFilter: cloudflare-proxied=true → orange-cloud (Cloudflare CDN + DDoS)</span>
+                </div>
+                <span class="filter-tag tag-pass">PROXY</span>
+              </div>
+              <div class="filter-row">
+                <div class="filter-num">2</div>
+                <div class="filter-text">
+                  external-dns-dnsonly
+                  <span class="filter-sub">annotationFilter: cloudflare-proxied!=true → grey-cloud (DNS only, required for cert-manager ACME)</span>
+                </div>
+                <span class="filter-tag tag-info">DNS</span>
+              </div>
+            </div>
+            <div class="checks" style="margin-top:10px;">
+              <div class="check-row">
+                <div class="check-icon ci-warn">⚠</div>
+                <div class="check-text"><strong>Requires:</strong> cloudflare_api_token, cloudflare_zone_id, cloudflare_zone. Both instances share one Secret but carry distinct txtOwnerId values to avoid TXT record conflicts.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-arrow">DNS-01 solver feeds cert-manager</div>
+
+          <!-- cert-manager -->
+          <div class="phase">
+            <div class="phase-title">cert-manager — enable_cert_manager</div>
+            <div class="exec-flow">
+              <div class="exec-step">
+                <div class="exec-icon">🔐</div>
+                <div>
+                  <div class="exec-name">Helm release + CRDs</div>
+                  <span class="exec-sub">installCRDs=true keeps CRDs in sync with chart version automatically</span>
+                </div>
+              </div>
+              <div class="exec-step">
+                <div class="exec-icon">☁️</div>
+                <div>
+                  <div class="exec-name">ClusterIssuer: letsencrypt-prod</div>
+                  <span class="exec-sub">DNS-01 via Cloudflare — supports wildcard certs and non-HTTP workloads. Token stored in a separate Secret from external-dns for independent rotation.</span>
+                </div>
+              </div>
+            </div>
+            <div class="checks" style="margin-top:10px;">
+              <div class="check-row">
+                <div class="check-icon ci-warn">⚠</div>
+                <div class="check-text"><strong>Requires:</strong> cloudflare_api_token. DNS-01 challenges must not be proxied — use the dns-only external-dns instance for ACME TXT records.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-arrow">TLS termination at ingress</div>
+
+          <!-- Ingress -->
+          <div class="phase">
+            <div class="phase-title">Ingress Controller — enable_ingress + ingress_type</div>
+            <div class="filters">
+              <div class="filter-row">
+                <div class="filter-num">T</div>
+                <div class="filter-text">
+                  Traefik v3 (ingress_type = "traefik", default)
+                  <span class="filter-sub">Hetzner LB uses private IP for health checks. Gateway API CRDs installed via kubectl. isDefaultClass=true.</span>
+                </div>
+                <span class="filter-tag tag-pass">DEFAULT</span>
+              </div>
+              <div class="filter-row">
+                <div class="filter-num">N</div>
+                <div class="filter-text">
+                  ingress-nginx (ingress_type = "nginx")
+                  <span class="filter-sub">Community chart ~> 4.11. controller.ingressClassResource.default=true. Mutually exclusive with Traefik.</span>
+                </div>
+                <span class="filter-tag tag-info">ALT</span>
+              </div>
+            </div>
+            <div class="checks" style="margin-top:10px;">
+              <div class="check-row">
+                <div class="check-icon ci-info">ℹ</div>
+                <div class="check-text"><strong>Monitoring assumes Traefik</strong> — the kube-prometheus-stack Grafana ingress annotation is hardcoded to <code style="font-family:var(--font-mono);font-size:11px;color:var(--a)">kubernetes.io/ingress.class: traefik</code>. Adjust if using NGINX.</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════ -->
+      <!-- COLUMN B — Storage & Scale         -->
+      <!-- ═══════════════════════════════════ -->
+      <div class="col col-b">
+        <div class="col-bar"></div>
+        <div class="col-bg-num">02</div>
+        <div class="col-inner">
+          <div class="col-header">
+            <div class="col-badge"><span class="badge-num">2</span>Storage &amp; Scale</div>
+          </div>
+          <div class="col-title">Persistence &amp;<br>Elasticity</div>
+          <div class="col-subtitle">Longhorn turns Hetzner block volumes into a distributed storage fabric; Cluster Autoscaler matches node count to actual workload demand.</div>
+          <div class="col-divider"></div>
+
+          <!-- Longhorn -->
+          <div class="phase">
+            <div class="phase-title">Longhorn — enable_longhorn</div>
+            <div class="steps">
+              <div class="step">
+                <div class="step-icon">💾</div>
+                <div>
+                  <div class="step-name">Distributed block storage on /mnt/longhorn</div>
+                  <div class="step-desc">Longhorn replicates volumes across worker nodes. Data lives on dedicated Hetzner block volumes mounted at <code style="font-family:var(--font-mono);font-size:11px;color:var(--b)">/mnt/longhorn</code>. Helm timeout is 600 s — it installs many DaemonSets and CRDs.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-icon">📊</div>
+                <div>
+                  <div class="step-name">Dynamic replica count</div>
+                  <div class="step-desc"><code style="font-family:var(--font-mono);font-size:11px;color:var(--b)">longhorn_default_replicas</code> is computed as <code style="font-family:var(--font-mono);font-size:11px;color:var(--b)">min(total_workers, 3)</code> in the root module — a single-node cluster gets 1 replica; a 3+ node cluster gets 3. Avoids scheduling failures when the cluster is smaller than the default replica count.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flow-arrow">creates two StorageClasses</div>
+
+            <div class="filters">
+              <div class="filter-row">
+                <div class="filter-num">RWO</div>
+                <div class="filter-text">
+                  longhorn-rwo — ReadWriteOnce (default)
+                  <span class="filter-sub">ext4, allowVolumeExpansion=true, reclaimPolicy=Delete, volumeBindingMode=Immediate</span>
+                </div>
+                <span class="filter-tag tag-pass">DEFAULT SC</span>
+              </div>
+              <div class="filter-row">
+                <div class="filter-num">RWX</div>
+                <div class="filter-text">
+                  longhorn-rwx — ReadWriteMany (builtin NFS)
+                  <span class="filter-sub">Only created when longhorn_rwx_mode = "builtin". NFS v4.1, softerr, timeo=600, retrans=5. Set "external" to use a separate NFS provisioner instead.</span>
+                </div>
+                <span class="filter-tag tag-info">OPTIONAL</span>
+              </div>
+            </div>
+
+            <div class="checks" style="margin-top:10px;">
+              <div class="check-row">
+                <div class="check-icon ci-warn">⚠</div>
+                <div class="check-text"><strong>Monitoring dependency:</strong> kube-prometheus-stack requests <code style="font-family:var(--font-mono);font-size:11px;color:var(--b)">longhorn-rwo</code> for Prometheus (50 Gi) and Alertmanager (10 Gi). Enable Longhorn first or override storageSpec in monitoring values.</div>
+              </div>
+              <div class="check-row">
+                <div class="check-icon ci-info">ℹ</div>
+                <div class="check-text"><strong>longhorn_volume_size</strong> on a node pool definition pre-provisions a block volume of that size (GB) on each worker node during cloud-init.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-arrow">autoscaler manages pool size</div>
+
+          <!-- Cluster Autoscaler -->
+          <div class="phase">
+            <div class="phase-title">Cluster Autoscaler — enable_cluster_autoscaler</div>
+            <div class="exec-flow">
+              <div class="exec-step">
+                <div class="exec-icon">⚙️</div>
+                <div>
+                  <div class="exec-name">HCLOUD_CLUSTER_CONFIG</div>
+                  <span class="exec-sub">Current Hetzner API (replaces deprecated HCLOUD_CLOUD_INIT). JSON base64-encoded into a Secret. Contains imagesForArch and per-pool cloudInit strings pre-rendered in the root module.</span>
+                </div>
+              </div>
+              <div class="exec-step">
+                <div class="exec-icon">📋</div>
+                <div>
+                  <div class="exec-name">Explicit node groups only</div>
+                  <span class="exec-sub">autoDiscovery=false. Only pools with scaling_mode = "autoscaled" appear in autoscalingGroups. Fixed pools are never touched by the autoscaler.</span>
+                </div>
+              </div>
+              <div class="exec-step">
+                <div class="exec-icon">📐</div>
+                <div>
+                  <div class="exec-name">least-waste expander</div>
+                  <span class="exec-sub">Prefers the node group that wastes the fewest resources. balance-similar-node-groups=true prevents imbalance when scaling up. skip-nodes-with-system-pods=false allows draining non-DaemonSet system pods.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="checks" style="margin-top:10px;">
+              <div class="check-row">
+                <div class="check-icon ci-warn">⚠</div>
+                <div class="check-text"><strong>Requires:</strong> hcloud_autoscaler_token (separate Hetzner token scoped to autoscaler actions). Tailscale node auth key injected into autoscaler cloud-inits when enable_tailscale_nodes=true.</div>
+              </div>
+              <div class="check-row">
+                <div class="check-icon ci-info">ℹ</div>
+                <div class="check-text"><strong>autoscaler_rbac_level</strong> = "upstream" (full SIG RBAC) or "minimal" (reduced scope). Default is "upstream" for out-of-the-box compatibility.</div>
+              </div>
+            </div>
+
+            <div class="guardrails" style="margin-top:14px;">
+              <div class="guardrail"><span class="gv">min_nodes</span><span class="gl">per pool (default 1)</span></div>
+              <div class="guardrail"><span class="gv">max_nodes</span><span class="gl">per pool (default 10)</span></div>
+              <div class="guardrail"><span class="gv">v1.32.7</span><span class="gl">default image tag</span></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════ -->
+      <!-- COLUMN C — Platform                -->
+      <!-- ═══════════════════════════════════ -->
+      <div class="col col-c">
+        <div class="col-bar"></div>
+        <div class="col-bg-num">03</div>
+        <div class="col-inner">
+          <div class="col-header">
+            <div class="col-badge"><span class="badge-num">3</span>Platform</div>
+          </div>
+          <div class="col-title">GitOps &amp;<br>Observability</div>
+          <div class="col-subtitle">Flux CD turns a GitHub repo into the source of truth for the cluster; kube-prometheus-stack makes everything visible; Tailscale secures access without a VPN server.</div>
+          <div class="col-divider"></div>
+
+          <!-- Flux -->
+          <div class="phase">
+            <div class="phase-title">Flux CD — enable_flux</div>
+            <div class="steps">
+              <div class="step">
+                <div class="step-icon">🔄</div>
+                <div>
+                  <div class="step-name">OCI Helm chart from ghcr.io</div>
+                  <div class="step-desc">Flux v2 is installed via the fluxcd-community OCI chart (<code style="font-family:var(--font-mono);font-size:11px;color:var(--c)">oci://ghcr.io/fluxcd-community/charts/flux2</code>). No traditional Helm repo index — the chart is pulled directly from the registry.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-icon">🔑</div>
+                <div>
+                  <div class="step-name">RSA-4096 deploy key, auto-registered</div>
+                  <div class="step-desc">A TLS keypair is generated and the public key is written to the <code style="font-family:var(--font-mono);font-size:11px;color:var(--c)">flux-system</code> Secret. When <code style="font-family:var(--font-mono);font-size:11px;color:var(--c)">flux_deploy_key_mode = "auto"</code> and a GitHub PAT is provided, Terraform registers the key on the target repo via the GitHub REST API — no manual copy-paste required.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="filters" style="margin-top:12px;">
+              <div class="filter-row">
+                <div class="filter-num">R</div>
+                <div class="filter-text">
+                  flux_github_org / flux_github_repo
+                  <span class="filter-sub">Target repository for Flux to watch. flux_path defaults to clusters/main; flux_branch defaults to main.</span>
+                </div>
+                <span class="filter-tag tag-pass">REQUIRED</span>
+              </div>
+              <div class="filter-row">
+                <div class="filter-num">G</div>
+                <div class="filter-text">
+                  github_token (PAT with repo write)
+                  <span class="filter-sub">Only needed for flux_deploy_key_mode = "auto". Set to null to register the deploy key manually.</span>
+                </div>
+                <span class="filter-tag tag-info">AUTO</span>
+              </div>
+            </div>
+
+            <div class="checks" style="margin-top:10px;">
+              <div class="check-row">
+                <div class="check-icon ci-warn">⚠</div>
+                <div class="check-text"><strong>known_hosts is empty at bootstrap.</strong> After apply, populate it with the target host's SSH fingerprint (e.g. via <code style="font-family:var(--font-mono);font-size:11px">flux create secret git</code>) before creating a GitRepository resource.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-arrow">metrics stored on Longhorn</div>
+
+          <!-- Monitoring -->
+          <div class="phase">
+            <div class="phase-title">kube-prometheus-stack — enable_monitoring</div>
+            <div class="exec-flow">
+              <div class="exec-step">
+                <div class="exec-icon">📈</div>
+                <div>
+                  <div class="exec-name">Prometheus + Alertmanager + Grafana</div>
+                  <span class="exec-sub">Full kube-prometheus-stack ~> 67.0. Includes kube-state-metrics and node-exporter. Helm timeout 600 s — deploys CRDs, DaemonSets, and Deployments (3–8 min on a fresh cluster).</span>
+                </div>
+              </div>
+              <div class="exec-step">
+                <div class="exec-icon">💽</div>
+                <div>
+                  <div class="exec-name">Longhorn-backed persistent storage</div>
+                  <span class="exec-sub">Prometheus claims 50 Gi on longhorn-rwo. Alertmanager claims 10 Gi. Retention = 30 days. Override storageSpec if Longhorn is not enabled.</span>
+                </div>
+              </div>
+              <div class="exec-step">
+                <div class="exec-icon">🌐</div>
+                <div>
+                  <div class="exec-name">Grafana ingress (optional)</div>
+                  <span class="exec-sub">Set grafana_hostname to expose Grafana via Traefik. Default password is "changeme" — override via sealed secret before exposing publicly.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="guardrails" style="margin-top:14px;">
+              <div class="guardrail guardrail-alert"><span class="gv">⚡ changeme</span><span class="gl">— Grafana default password; override before public exposure</span></div>
+            </div>
+          </div>
+
+          <div class="flow-arrow">zero-trust access layer</div>
+
+          <!-- Tailscale -->
+          <div class="phase">
+            <div class="phase-title">Tailscale — enable_tailscale_operator / enable_tailscale_nodes</div>
+            <div class="ladder">
+              <div class="ladder-row p5">
+                <span class="ladder-priority">Operator</span>
+                <span class="ladder-icon">🔗</span>
+                <div>
+                  <div class="ladder-trigger">enable_tailscale_operator</div>
+                  <div class="ladder-action">Deploys the Tailscale Kubernetes Operator (~> 1.76). Registers as <em>&lt;cluster_name&gt;-operator</em> on the tailnet. OAuth credentials read from <code style="font-family:var(--font-mono);font-size:11px">operator-oauth</code> Secret — never exposed in Helm values.</div>
+                </div>
+              </div>
+              <div class="ladder-row p4">
+                <span class="ladder-priority">Nodes</span>
+                <span class="ladder-icon">🖥️</span>
+                <div>
+                  <div class="ladder-trigger">enable_tailscale_nodes</div>
+                  <div class="ladder-action">Injects tailscale_node_auth_key into worker and autoscaler cloud-inits so each node joins the tailnet at boot. Separate from the operator auth key — allows independent ACL tagging (tag:k8s-node vs tag:k8s-operator).</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="checks" style="margin-top:12px;">
+              <div class="check-row">
+                <div class="check-icon ci-info">ℹ</div>
+                <div class="check-text"><strong>Two independent flags:</strong> the operator exposes Services onto the tailnet; node enrollment gives SSH/API access over Tailscale. They can be combined or used separately.</div>
+              </div>
+              <div class="check-row">
+                <div class="check-icon ci-info">ℹ</div>
+                <div class="check-text"><strong>Autoscaler integration:</strong> when enable_tailscale_nodes=true, the node auth key is embedded in the HCLOUD_CLUSTER_CONFIG cloud-init so newly provisioned autoscaled nodes join the tailnet automatically.</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- end .columns -->
+
+    <footer class="site-footer">terraform-hcloud-rke2-cluster &middot; modules/addons &middot; Cilium 1.19 &middot; Flux 2.4 &middot; Longhorn 1.7 &middot; Traefik 32</footer>
+
+  </div>
+
+  <script>
+    const cols = document.querySelectorAll('.col');
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+    }, { threshold: 0.08 });
+    cols.forEach(c => io.observe(c));
+
+    // stagger .filter-row and .ladder-row children on column enter
+    document.querySelectorAll('.col').forEach(col => {
+      const colIo = new IntersectionObserver(entries => {
+        if (!entries[0].isIntersecting) return;
+        col.querySelectorAll('.filter-row').forEach((r, i) => {
+          r.style.cssText = 'opacity:0;transform:translateX(-10px);transition:opacity .35s ease,transform .35s ease';
+          setTimeout(() => r.style.cssText += ';opacity:1;transform:translateX(0)', 300 + i * 60);
+        });
+        col.querySelectorAll('.ladder-row').forEach((r, i) => {
+          r.style.cssText = 'opacity:0;transform:translateX(10px);transition:opacity .35s ease,transform .35s ease';
+          setTimeout(() => r.style.cssText += ';opacity:1;transform:translateX(0)', 350 + i * 90);
+        });
+        colIo.unobserve(col);
+      }, { threshold: 0.15 });
+      colIo.observe(col);
+    });
+  </script>
+</body>
+</html>
