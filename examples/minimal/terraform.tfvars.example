@@ -1,0 +1,7 @@
+hcloud_token    = "your-hetzner-token"
+ssh_key_name    = "your-ssh-key-name"
+ssh_private_key = <<EOF
+-----BEGIN OPENSSH PRIVATE KEY-----
+...your key here...
+-----END OPENSSH PRIVATE KEY-----
+EOF

@@ -1,0 +1,26 @@
+# Terraform downloaded providers and modules (large binaries)
+.terraform/
+
+# Local tfvars files may contain secrets
+*.tfvars
+*.tfvars.json
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Override files (local dev overrides, not for VCS)
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Fetched kubeconfig — contains credentials
+.kube/
+
+# CLI configuration files
+.terraformrc
+terraform.rc
+
+# Lock file IS committed (provider version pinning, like package-lock.json)
+!.terraform.lock.hcl

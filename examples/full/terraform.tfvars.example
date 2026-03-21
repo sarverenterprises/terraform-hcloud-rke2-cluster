@@ -1,0 +1,22 @@
+cluster_name    = "prod"
+hcloud_token    = "your-hetzner-token"
+ssh_key_name    = "your-ssh-key-name"
+ssh_private_key = <<EOF
+-----BEGIN OPENSSH PRIVATE KEY-----
+...your key here...
+-----END OPENSSH PRIVATE KEY-----
+EOF
+
+# Cloudflare
+cloudflare_api_token = "your-cloudflare-api-token"
+cloudflare_zone_id   = "your-cloudflare-zone-id"
+cloudflare_zone      = "example.com"
+
+# GitHub (Flux)
+github_token     = "ghp_your-github-personal-access-token"
+flux_github_org  = "your-github-org-or-user"
+flux_github_repo = "your-flux-repo"
+
+# Tailscale
+tailscale_node_auth_key     = "tskey-auth-node-xxxxxxxxxxxxxxxx"
+tailscale_operator_auth_key = "tskey-auth-operator-xxxxxxxxxxxxxxxx"
