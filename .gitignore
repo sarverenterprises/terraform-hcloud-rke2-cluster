@@ -22,5 +22,8 @@ override.tf.json
 .terraformrc
 terraform.rc
 
-# Lock file IS committed (provider version pinning, like package-lock.json)
+# Lock file IS committed for root module and examples (provider version pinning)
+# Modules are library modules, not standalone roots — no lock files there
 !.terraform.lock.hcl
+!examples/*/.terraform.lock.hcl
+modules/**/.terraform.lock.hcl

@@ -1,12 +1,12 @@
 terraform {
   required_version = ">= 1.5"
   required_providers {
-    hcloud     = { source = "hetznercloud/hcloud",  version = ">= 1.58.0" }
-    helm       = { source = "hashicorp/helm",       version = ">= 2.14.0" }
+    hcloud     = { source = "hetznercloud/hcloud", version = ">= 1.58.0" }
+    helm       = { source = "hashicorp/helm", version = ">= 2.14.0" }
     kubernetes = { source = "hashicorp/kubernetes", version = ">= 2.31.0" }
-    tls        = { source = "hashicorp/tls",        version = ">= 4.0.0" }
-    null       = { source = "hashicorp/null",       version = ">= 3.2.0" }
-    random     = { source = "hashicorp/random",     version = ">= 3.6.0" }
+    tls        = { source = "hashicorp/tls", version = ">= 4.0.0" }
+    null       = { source = "hashicorp/null", version = ">= 3.2.0" }
+    random     = { source = "hashicorp/random", version = ">= 3.6.0" }
   }
 }
 
@@ -19,7 +19,7 @@ provider "hcloud" {
 # On the very first apply the file does not yet exist, so provider configuration
 # is deferred until Phase 2 (see two-phase apply note below).
 provider "helm" {
-  kubernetes {
+  kubernetes = {
     config_path = module.cluster.kubeconfig != null ? "${path.root}/../../.kube/${var.cluster_name}.yaml" : ""
   }
 }

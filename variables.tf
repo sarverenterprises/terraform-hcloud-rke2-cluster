@@ -180,8 +180,8 @@ variable "trusted_ssh_cidrs" {
     Default [] = SSH blocked from all external IPs.
     Use ["100.64.0.0/10"] if using Tailscale node-level access without public SSH.
   EOT
-  type    = list(string)
-  default = []
+  type        = list(string)
+  default     = []
 }
 
 variable "kube_api_allowed_cidrs" {
@@ -189,8 +189,8 @@ variable "kube_api_allowed_cidrs" {
     CIDRs allowed to reach the Kubernetes API server (port 6443) on the load balancer.
     Default open — restrict to office/VPN/Tailscale CIDRs in production.
   EOT
-  type    = list(string)
-  default = ["0.0.0.0/0", "::/0"]
+  type        = list(string)
+  default     = ["0.0.0.0/0", "::/0"]
 }
 
 variable "nodeport_allowed_cidrs" {
@@ -198,8 +198,8 @@ variable "nodeport_allowed_cidrs" {
     CIDRs allowed to reach NodePort services (TCP 30000-32767) on worker nodes.
     Default [] = NodePort closed. Prefer Hetzner LB via CCM instead of NodePort.
   EOT
-  type    = list(string)
-  default = []
+  type        = list(string)
+  default     = []
 }
 
 # =============================================================================

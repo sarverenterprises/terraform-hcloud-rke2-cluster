@@ -47,8 +47,8 @@ resource "helm_release" "cilium" {
       ipam = {
         mode = "cluster-pool"
         operator = {
-          clusterPoolIPv4PodCIDRList = ["10.42.0.0/16"]  # Match RKE2 default cluster-cidr
-          clusterPoolIPv4MaskSize    = 24                 # /24 per node = 254 pods/node
+          clusterPoolIPv4PodCIDRList = ["10.42.0.0/16"] # Match RKE2 default cluster-cidr
+          clusterPoolIPv4MaskSize    = 24               # /24 per node = 254 pods/node
         }
       }
 

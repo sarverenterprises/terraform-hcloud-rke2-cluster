@@ -25,8 +25,8 @@ output "kubeconfig" {
       terraform output -raw kubeconfig > kubeconfig.yaml
     IMPORTANT: The state backend must use encryption — this value is stored in plaintext in Terraform state.
   EOT
-  value     = fileexists(local.kubeconfig_path) ? file(local.kubeconfig_path) : null
-  sensitive = true
+  value       = fileexists(local.kubeconfig_path) ? file(local.kubeconfig_path) : null
+  sensitive   = true
 }
 
 output "rke2_token" {

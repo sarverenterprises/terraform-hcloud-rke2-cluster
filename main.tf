@@ -83,9 +83,9 @@ module "worker_pools" {
 
   source = "./modules/node-pool"
 
-  pool_name  = "${var.cluster_name}-${each.key}"
-  role       = "agent"
-  node_count = each.value.scaling_mode == "autoscaled" ? each.value.min_nodes : each.value.node_count
+  pool_name   = "${var.cluster_name}-${each.key}"
+  role        = "agent"
+  node_count  = each.value.scaling_mode == "autoscaled" ? each.value.min_nodes : each.value.node_count
   server_type = each.value.server_type
   location    = coalesce(each.value.location, var.location)
   os_image    = var.os_image
@@ -162,8 +162,8 @@ resource "null_resource" "fetch_kubeconfig" {
   depends_on = [null_resource.wait_for_cluster]
 
   triggers = {
-    cp_ids  = join(",", module.control_plane.server_ids)
-    lb_ip   = module.networking.control_plane_lb_ip
+    cp_ids = join(",", module.control_plane.server_ids)
+    lb_ip  = module.networking.control_plane_lb_ip
   }
 
   provisioner "local-exec" {
@@ -219,7 +219,7 @@ module "addons" {
   longhorn_default_replicas = local.longhorn_default_replicas
 
   # Tailscale for autoscaler cloud-init
-  enable_tailscale_nodes = var.enable_tailscale_nodes
+  enable_tailscale_nodes  = var.enable_tailscale_nodes
   tailscale_node_auth_key = var.tailscale_node_auth_key
 
   # Add-on flags

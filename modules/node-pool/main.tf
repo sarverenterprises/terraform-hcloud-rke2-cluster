@@ -38,36 +38,36 @@ resource "hcloud_server" "nodes" {
   user_data = (
     var.role == "server" && count.index == 0
     ? templatefile("${path.module}/templates/cp-init.yaml.tpl", {
-      rke2_version        = var.rke2_version
-      rke2_token          = var.rke2_token
-      control_plane_lb_ip = var.control_plane_lb_ip
-      node_ip             = var.first_node_static_ip # static, known at plan time
-      cluster_init        = true
-      has_labels          = local.has_labels
-      label_args          = local.label_args
-      has_taints          = local.has_taints
-      taint_args          = local.taint_args
+      rke2_version         = var.rke2_version
+      rke2_token           = var.rke2_token
+      control_plane_lb_ip  = var.control_plane_lb_ip
+      node_ip              = var.first_node_static_ip # static, known at plan time
+      cluster_init         = true
+      has_labels           = local.has_labels
+      label_args           = local.label_args
+      has_taints           = local.has_taints
+      taint_args           = local.taint_args
       longhorn_volume_size = var.longhorn_volume_size
-      enable_tailscale    = var.enable_tailscale_nodes
-      tailscale_auth_key  = coalesce(var.tailscale_auth_key, "")
-      hostname            = "${var.pool_name}-0"
+      enable_tailscale     = var.enable_tailscale_nodes
+      tailscale_auth_key   = coalesce(var.tailscale_auth_key, "")
+      hostname             = "${var.pool_name}-0"
     })
     : var.role == "server"
     ? templatefile("${path.module}/templates/cp-init.yaml.tpl", {
-      rke2_version        = var.rke2_version
-      rke2_token          = var.rke2_token
-      control_plane_lb_ip = var.control_plane_lb_ip
-      node_ip             = null  # assigned by Hetzner DHCP
-      cluster_init        = false
-      first_cp_ip         = var.first_cp_ip
-      has_labels          = local.has_labels
-      label_args          = local.label_args
-      has_taints          = local.has_taints
-      taint_args          = local.taint_args
+      rke2_version         = var.rke2_version
+      rke2_token           = var.rke2_token
+      control_plane_lb_ip  = var.control_plane_lb_ip
+      node_ip              = null # assigned by Hetzner DHCP
+      cluster_init         = false
+      first_cp_ip          = var.first_cp_ip
+      has_labels           = local.has_labels
+      label_args           = local.label_args
+      has_taints           = local.has_taints
+      taint_args           = local.taint_args
       longhorn_volume_size = var.longhorn_volume_size
-      enable_tailscale    = var.enable_tailscale_nodes
-      tailscale_auth_key  = coalesce(var.tailscale_auth_key, "")
-      hostname            = "${var.pool_name}-${count.index}"
+      enable_tailscale     = var.enable_tailscale_nodes
+      tailscale_auth_key   = coalesce(var.tailscale_auth_key, "")
+      hostname             = "${var.pool_name}-${count.index}"
     })
     : templatefile("${path.module}/templates/worker-init.yaml.tpl", {
       rke2_version         = var.rke2_version
@@ -94,7 +94,7 @@ resource "hcloud_server" "nodes" {
   # that would fight the autoscaler.
   lifecycle {
     ignore_changes = [
-      user_data,  # cloud-init is only applied at creation time
+      user_data, # cloud-init is only applied at creation time
     ]
   }
 }
@@ -154,7 +154,7 @@ resource "hcloud_volume" "longhorn_data" {
 
   lifecycle {
     # Prevent accidental deletion — data loss if Longhorn is running
-    prevent_destroy = false  # Set to true in production for critical clusters
+    prevent_destroy = false # Set to true in production for critical clusters
   }
 }
 
@@ -163,5 +163,5 @@ resource "hcloud_volume_attachment" "longhorn_data" {
 
   volume_id = hcloud_volume.longhorn_data[count.index].id
   server_id = hcloud_server.nodes[count.index].id
-  automount = true  # Mounts under /dev/disk/by-id/scsi-0HC_Volume_<id>
+  automount = true # Mounts under /dev/disk/by-id/scsi-0HC_Volume_<id>
 }

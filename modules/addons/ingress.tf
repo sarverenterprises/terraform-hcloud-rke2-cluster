@@ -61,7 +61,7 @@ resource "helm_release" "traefik" {
         }
       }
       ingressClass = {
-        enabled      = true
+        enabled        = true
         isDefaultClass = true
       }
     })

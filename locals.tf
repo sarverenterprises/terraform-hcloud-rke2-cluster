@@ -19,8 +19,8 @@ locals {
   # ==========================================================================
   # Per-Component Hetzner Tokens
   # ==========================================================================
-  effective_ccm_token       = coalesce(var.hcloud_ccm_token, var.hcloud_token)
-  effective_csi_token       = coalesce(var.hcloud_csi_token, var.hcloud_token)
+  effective_ccm_token        = coalesce(var.hcloud_ccm_token, var.hcloud_token)
+  effective_csi_token        = coalesce(var.hcloud_csi_token, var.hcloud_token)
   effective_autoscaler_token = coalesce(var.hcloud_autoscaler_token, var.hcloud_token)
 
   # ==========================================================================

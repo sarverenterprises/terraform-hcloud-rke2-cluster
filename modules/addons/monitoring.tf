@@ -65,7 +65,7 @@ resource "helm_release" "kube_prometheus_stack" {
   values = [
     yamlencode({
       grafana = {
-        enabled       = true
+        enabled = true
         # Default password — operator MUST override this via a sealed secret
         # or by passing a custom values override before exposing Grafana publicly.
         adminPassword = "changeme"

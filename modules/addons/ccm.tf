@@ -47,7 +47,7 @@ resource "helm_release" "hcloud_ccm" {
   values = [
     yamlencode({
       networking = {
-        enabled     = true
+        enabled = true
         # RKE2 default pod CIDR — must match cluster-cidr in RKE2 server config
         clusterCIDR = "10.42.0.0/16"
       }
