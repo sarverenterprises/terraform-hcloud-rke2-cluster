@@ -1,7 +1,7 @@
 # terraform-hcloud-rke2-cluster
 
 [![Terraform Registry](https://img.shields.io/badge/Terraform-Registry-7B42BC?logo=terraform)](https://registry.terraform.io)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A production-grade Terraform module that provisions fully functional [RKE2](https://docs.rke2.io/) Kubernetes clusters on [Hetzner Cloud](https://www.hetzner.com/cloud). The module mirrors the conventions of a production Hetzner + RKE2 setup and exposes all major add-ons through simple `enable_*` variables.
 
