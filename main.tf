@@ -199,22 +199,37 @@ resource "null_resource" "fetch_kubeconfig" {
 # =============================================================================
 # Kubeconfig State Persistence
 #
-# Stores the kubeconfig in Terraform state so that HCP Terraform remote runs
-# (which have no persistent filesystem between phases) can access it in Phase 2.
-# The terraform_data resource's output attribute is persisted in state, unlike
-# null_resource triggers or data "local_file" which require the file on disk.
+# Stores the kubeconfig in Terraform state so that CI runners with no
+# persistent filesystem between phases can access it in Phase 2.
+#
+# Why data "local_file" instead of file() directly in terraform_data.input:
+#   file() is a pure function evaluated at both plan time AND apply time. When
+#   fetch_kubeconfig overwrites the kubeconfig file during an apply (e.g. on
+#   cluster recreate), the plan-time value and apply-time value diverge,
+#   causing Terraform to emit "function returned an inconsistent result".
+#
+#   data "local_file" with depends_on = [null_resource.fetch_kubeconfig] is
+#   deferred by Terraform to apply time whenever fetch_kubeconfig has planned
+#   changes. The input becomes "(known after apply)" during planning, which
+#   Terraform does not compare against the applied value — no inconsistency.
+#
+#   When fetch_kubeconfig has no planned changes (cluster unchanged), the data
+#   source evaluates at plan time against the stable file on disk — also fine.
 # =============================================================================
 
-resource "terraform_data" "kubeconfig_store" {
+data "local_file" "kubeconfig" {
+  filename   = local.kubeconfig_path
   depends_on = [null_resource.fetch_kubeconfig]
+}
 
-  # Re-run whenever the kubeconfig file changes (new cluster or LB IP change).
+resource "terraform_data" "kubeconfig_store" {
+  # Re-run whenever the cluster changes (new servers or LB IP).
   triggers_replace = [
     join(",", module.control_plane.server_ids),
     module.networking.control_plane_lb_ip,
   ]
 
-  input = sensitive(fileexists(local.kubeconfig_path) ? file(local.kubeconfig_path) : "")
+  input = sensitive(data.local_file.kubeconfig.content)
 }
 
 # =============================================================================
