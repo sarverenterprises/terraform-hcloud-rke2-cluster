@@ -7,6 +7,20 @@ variable "cluster_name" {
   type        = string
 }
 
+variable "kubeconfig_path" {
+  description = <<-EOT
+    Absolute path to the kubeconfig file on disk.
+    Required for resources that cannot validate CRD types at plan time
+    (e.g. CiliumClusterwideNetworkPolicy). When set, such resources are applied
+    via kubectl local-exec instead of kubernetes_manifest. When null, the
+    kubernetes_manifest provider is used — this requires the CRDs to already
+    exist in the cluster at plan time (safe for subsequent applies after
+    Cilium is installed).
+  EOT
+  type        = string
+  default     = null
+}
+
 # =============================================================================
 # Hetzner Tokens
 # =============================================================================

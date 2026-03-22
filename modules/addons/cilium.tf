@@ -80,9 +80,54 @@ resource "helm_release" "cilium" {
 # default. This policy denies egress to it cluster-wide, preventing workloads
 # from leaking credentials or enumerating instance metadata.
 #
-# Applied after Cilium is ready so the CRD exists when this resource is created.
+# Two implementations, selected by var.kubeconfig_path:
+#
+#   kubeconfig_path != null → null_resource + kubectl local-exec
+#     Used on initial cluster deploy when CiliumClusterwideNetworkPolicy CRD
+#     does not exist yet at plan time. The kubernetes_manifest provider
+#     validates CRD kinds against the live API at plan time, causing
+#     "API did not recognize GroupVersionKind" errors even when depends_on
+#     is set. kubectl apply runs only at apply time, after helm_release.cilium
+#     completes and the CRD is registered.
+#
+#   kubeconfig_path == null → kubernetes_manifest
+#     Used on subsequent applies (or in workspaces where no kubeconfig file
+#     exists on disk) once Cilium CRDs are already present in the cluster.
 # ---------------------------------------------------------------------------
+
+# kubectl-based apply: used when kubeconfig is on disk (initial deploy).
+resource "null_resource" "block_metadata_api" {
+  count = var.kubeconfig_path != null ? 1 : 0
+
+  triggers = {
+    # Re-apply if the Cilium release changes (upgrade or recreate).
+    cilium_release_id = helm_release.cilium.id
+  }
+
+  provisioner "local-exec" {
+    command     = <<-EOT
+      kubectl --kubeconfig '${var.kubeconfig_path}' apply -f - <<'POLICY'
+      apiVersion: cilium.io/v2
+      kind: CiliumClusterwideNetworkPolicy
+      metadata:
+        name: block-metadata-api
+      spec:
+        endpointSelector: {}
+        egressDeny:
+        - toCIDR:
+          - 169.254.169.254/32
+      POLICY
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+  }
+
+  depends_on = [helm_release.cilium]
+}
+
+# kubernetes_manifest fallback: used on subsequent applies when CRD exists.
 resource "kubernetes_manifest" "block_metadata_api" {
+  count = var.kubeconfig_path == null ? 1 : 0
+
   manifest = {
     apiVersion = "cilium.io/v2"
     kind       = "CiliumClusterwideNetworkPolicy"

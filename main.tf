@@ -37,20 +37,20 @@ module "networking" {
 module "control_plane" {
   source = "./modules/node-pool"
 
-  pool_name          = "${var.cluster_name}-cp"
-  role               = "server"
-  node_count         = 3
-  server_type        = var.control_plane_server_type
-  location           = local.control_plane_location
-  os_image           = var.os_image
-  ssh_keys           = var.ssh_keys
-  network_id         = module.networking.network_id
-  subnet_id          = module.networking.subnet_id
-  placement_group_id = module.networking.placement_group_id
+  pool_name                = "${var.cluster_name}-cp"
+  role                     = "server"
+  node_count               = 3
+  server_type              = var.control_plane_server_type
+  location                 = local.control_plane_location
+  os_image                 = var.os_image
+  ssh_keys                 = var.ssh_keys
+  network_id               = module.networking.network_id
+  subnet_id                = module.networking.subnet_id
+  placement_group_id       = module.networking.placement_group_id
   lb_id                    = module.networking.lb_id
   attach_to_lb             = true
   lb_network_attachment_id = module.networking.lb_network_attachment_id
-  assign_public_ip   = true
+  assign_public_ip         = true
 
   # Assign the first CP a known static private IP to avoid circular dependencies
   # in worker cloud-inits that reference the first CP's join endpoint.
@@ -169,7 +169,7 @@ resource "null_resource" "fetch_kubeconfig" {
   }
 
   provisioner "local-exec" {
-    command = <<-EOT
+    command     = <<-EOT
       mkdir -p "${path.root}/.kube"
       ssh \
         -o StrictHostKeyChecking=no \
@@ -220,7 +220,8 @@ resource "terraform_data" "kubeconfig_store" {
 module "addons" {
   source = "./modules/addons"
 
-  cluster_name = var.cluster_name
+  cluster_name    = var.cluster_name
+  kubeconfig_path = local.kubeconfig_path
 
   # Hetzner tokens (per-component for least-privilege)
   hcloud_ccm_token        = local.effective_ccm_token
