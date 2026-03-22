@@ -15,9 +15,7 @@ output "private_ips" {
 
 output "public_ips" {
   description = "Public IPv4 addresses of nodes. Empty string for nodes without a public IP."
-  value = [
-    for s in hcloud_server.nodes : coalesce(s.ipv4_address, "")
-  ]
+  value       = [for s in hcloud_server.nodes : s.ipv4_address]
 }
 
 output "first_node_public_ip" {
