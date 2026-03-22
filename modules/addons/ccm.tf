@@ -36,7 +36,7 @@ resource "helm_release" "hcloud_ccm" {
 
   name       = "hcloud-ccm"
   repository = "https://charts.hetzner.cloud"
-  chart      = "hcloud-ccm"
+  chart      = "hcloud-cloud-controller-manager"
   namespace  = "kube-system"
   version    = var.hcloud_ccm_chart_version
 

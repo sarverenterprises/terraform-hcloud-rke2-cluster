@@ -339,21 +339,21 @@ variable "argocd_dex_connectors" {
 # =============================================================================
 
 variable "cilium_chart_version" {
-  description = "Cilium Helm chart version."
+  description = "Cilium Helm chart version. Must be an exact version — Helm provider v3 does not support constraint expressions."
   type        = string
-  default     = "~> 1.19.0"
+  default     = "1.19.1"
 }
 
 variable "hcloud_ccm_chart_version" {
-  description = "Hetzner CCM Helm chart version."
+  description = "Hetzner CCM Helm chart version. Must be an exact version — Helm provider v3 does not support constraint expressions."
   type        = string
-  default     = "~> 1.21"
+  default     = "1.30.1"
 }
 
 variable "hcloud_csi_chart_version" {
-  description = "Hetzner CSI Helm chart version."
+  description = "Hetzner CSI Helm chart version. Must be an exact version — Helm provider v3 does not support constraint expressions."
   type        = string
-  default     = "~> 2.9"
+  default     = "2.20.0"
 }
 
 variable "longhorn_chart_version" {
