@@ -21,14 +21,23 @@ ${taint_args}
 %{ endif ~}
 
 runcmd:
-  # Detect and set the Hetzner private network IP for node-ip
-  # This ensures Hetzner CCM sets the correct internal IP on the Node object.
+  # Detect and set the Hetzner private network IP for node-ip.
+  # Uses subnet prefix matching (more reliable than interface names) with a
+  # 60s retry loop to handle DHCP assignment lag on first boot.
   - |
-    PRIVATE_IP=$(ip -4 addr show eth1 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -1 || \
-                 ip -4 addr show ens10 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -1 || \
-                 echo "")
+    SUBNET_PREFIX=$(echo "${cluster_subnet_cidr}" | cut -d/ -f1 | cut -d. -f1-2)
+    PRIVATE_IP=""
+    for i in $(seq 1 60); do
+      PRIVATE_IP=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+\.\d+\.\d+\.\d+(?=/)' \
+                   | grep "^$SUBNET_PREFIX\." | head -1 || true)
+      if [ -n "$PRIVATE_IP" ]; then break; fi
+      sleep 1
+    done
     if [ -n "$PRIVATE_IP" ]; then
-      echo "node-ip: $PRIVATE_IP" >> /etc/rancher/rke2/config.yaml
+      echo "node-ip: \"$PRIVATE_IP\"" >> /etc/rancher/rke2/config.yaml
+      echo "Detected private IP: $PRIVATE_IP — written to config.yaml"
+    else
+      echo "WARNING: no private network IP detected; node-ip not set"
     fi
 
   # Install RKE2 agent

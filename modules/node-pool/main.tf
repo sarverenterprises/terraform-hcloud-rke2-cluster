@@ -82,6 +82,7 @@ resource "hcloud_server" "nodes" {
       rke2_version         = var.rke2_version
       rke2_token           = var.rke2_token
       control_plane_lb_ip  = var.control_plane_lb_ip
+      cluster_subnet_cidr  = var.cluster_subnet_cidr
       has_labels           = local.has_labels
       label_args           = local.label_args
       has_taints           = local.has_taints
