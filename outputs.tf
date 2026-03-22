@@ -39,3 +39,13 @@ output "first_cp_public_ip" {
   description = "Public IPv4 address of the first control plane node. Used for initial SSH access."
   value       = module.control_plane.first_node_public_ip
 }
+
+output "flux_public_key" {
+  description = "Flux SSH deploy key public key. Register as a read-only GitHub deploy key when flux_deploy_key_mode='manual'."
+  value       = module.addons.flux_public_key
+}
+
+output "argocd_admin_password_hint" {
+  description = "kubectl command to retrieve the Argo CD initial admin password. Only set when enable_argocd=true."
+  value       = module.addons.argocd_admin_password_hint
+}
