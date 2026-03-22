@@ -133,6 +133,12 @@ variable "lb_private_ip" {
   default     = null
 }
 
+variable "enable_placement_group" {
+  description = "Create a spread placement group for control plane nodes (one CP per physical host). Disable if provisioning fails with 'error during placement' in datacenters with limited capacity."
+  type        = bool
+  default     = true
+}
+
 variable "pod_cidr" {
   description = "CIDR for Kubernetes pods (RKE2 cluster-cidr and Cilium). Must not overlap with other clusters on the same network."
   type        = string

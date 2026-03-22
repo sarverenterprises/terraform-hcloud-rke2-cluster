@@ -48,7 +48,7 @@ module "control_plane" {
   ssh_keys                 = var.ssh_keys
   network_id               = module.networking.network_id
   subnet_id                = module.networking.subnet_id
-  placement_group_id       = module.networking.placement_group_id
+  placement_group_id       = var.enable_placement_group ? module.networking.placement_group_id : null
   lb_id                    = module.networking.lb_id
   attach_to_lb             = true
   lb_network_attachment_id = module.networking.lb_network_attachment_id
