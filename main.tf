@@ -47,8 +47,9 @@ module "control_plane" {
   network_id         = module.networking.network_id
   subnet_id          = module.networking.subnet_id
   placement_group_id = module.networking.placement_group_id
-  lb_id              = module.networking.lb_id
-  attach_to_lb       = true
+  lb_id                    = module.networking.lb_id
+  attach_to_lb             = true
+  lb_network_attachment_id = module.networking.lb_network_attachment_id
   assign_public_ip   = true
 
   # Assign the first CP a known static private IP to avoid circular dependencies

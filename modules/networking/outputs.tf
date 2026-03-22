@@ -23,6 +23,11 @@ output "lb_id" {
   value       = hcloud_load_balancer.control_plane.id
 }
 
+output "lb_network_attachment_id" {
+  description = "ID of the LB-to-private-network attachment. Used to order LB target registration after the LB joins the network."
+  value       = hcloud_load_balancer_network.control_plane.id
+}
+
 output "control_plane_lb_ip" {
   description = "Public IPv4 address of the control plane load balancer."
   value       = hcloud_load_balancer.control_plane.ipv4

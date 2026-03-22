@@ -68,6 +68,12 @@ variable "attach_to_lb" {
   default     = false
 }
 
+variable "lb_network_attachment_id" {
+  description = "ID of the LB-to-private-network attachment resource. Passed here to ensure the LB is on the private network before targets are registered."
+  type        = string
+  default     = null
+}
+
 variable "assign_public_ip" {
   description = "Assign a public IPv4 to each node. Default true for CP, false for workers."
   type        = bool

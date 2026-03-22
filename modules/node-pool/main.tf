@@ -122,6 +122,14 @@ resource "hcloud_server_network" "nodes" {
 # Load Balancer Target Registration (control plane only)
 # =============================================================================
 
+# Sentinel resource: holds the LB network attachment ID so that
+# hcloud_load_balancer_target can depend_on it and be guaranteed the LB
+# is already joined to the private network before targets are registered.
+resource "terraform_data" "lb_network_ready" {
+  count = var.attach_to_lb ? 1 : 0
+  input = var.lb_network_attachment_id
+}
+
 resource "hcloud_load_balancer_target" "cp" {
   count = var.attach_to_lb ? var.node_count : 0
 
@@ -130,7 +138,7 @@ resource "hcloud_load_balancer_target" "cp" {
   server_id        = hcloud_server.nodes[count.index].id
   use_private_ip   = true
 
-  depends_on = [hcloud_server_network.nodes]
+  depends_on = [hcloud_server_network.nodes, terraform_data.lb_network_ready]
 }
 
 # =============================================================================
