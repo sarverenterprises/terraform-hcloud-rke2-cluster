@@ -14,6 +14,8 @@ write_files:
       cloud-provider-name: external
       cni: none
       secrets-encryption: true
+      cluster-cidr: "${pod_cidr}"
+      service-cidr: "${service_cidr}"
 %{ if node_ip != null ~}
       node-ip: "${node_ip}"
 %{ endif ~}

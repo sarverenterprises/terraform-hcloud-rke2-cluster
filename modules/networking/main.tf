@@ -1,10 +1,12 @@
 # =============================================================================
 # Private Network
-# Always provisioned — required for Hetzner CCM (correct node internal IPs)
-# and Cilium encrypted pod networking (VXLAN over private net).
+# When existing_network_id is null (default): create a new hcloud_network.
+# When existing_network_id is set: use the existing network via a data source.
+# Either way: always create a subnet for this cluster within the network.
 # =============================================================================
 
 resource "hcloud_network" "cluster" {
+  count    = var.existing_network_id == null ? 1 : 0
   name     = "${var.cluster_name}-network"
   ip_range = var.network_cidr
 
@@ -13,8 +15,13 @@ resource "hcloud_network" "cluster" {
   }
 }
 
+data "hcloud_network" "existing" {
+  count = var.existing_network_id != null ? 1 : 0
+  id    = var.existing_network_id
+}
+
 resource "hcloud_network_subnet" "cluster" {
-  network_id   = hcloud_network.cluster.id
+  network_id   = local.network_id
   type         = "cloud"
   network_zone = local.network_zone
   ip_range     = var.cluster_subnet_cidr
@@ -50,7 +57,7 @@ resource "hcloud_load_balancer" "control_plane" {
 # Attach the LB to the private network so CCM can reach nodes via private IPs
 resource "hcloud_load_balancer_network" "control_plane" {
   load_balancer_id = hcloud_load_balancer.control_plane.id
-  network_id       = hcloud_network.cluster.id
+  network_id       = local.network_id
 }
 
 # Kubernetes API server (port 6443)
@@ -90,6 +97,10 @@ resource "hcloud_load_balancer_service" "rke2_supervisor" {
 # =============================================================================
 
 locals {
+  # Resolve network ID and name from either the created or existing network
+  network_id   = var.existing_network_id != null ? var.existing_network_id : hcloud_network.cluster[0].id
+  network_name = var.existing_network_id != null ? data.hcloud_network.existing[0].name : hcloud_network.cluster[0].name
+
   # Map Hetzner location to network zone
   network_zone = lookup(
     {

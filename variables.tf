@@ -121,6 +121,24 @@ variable "cluster_subnet_cidr" {
   }
 }
 
+variable "existing_network_id" {
+  description = "ID of an existing Hetzner private network to attach this cluster to. When set, no new network is created — only a subnet (cluster_subnet_cidr) is added. The network_cidr variable is ignored when this is set. Set to null (default) to create a fresh network."
+  type        = string
+  default     = null
+}
+
+variable "pod_cidr" {
+  description = "CIDR for Kubernetes pods (RKE2 cluster-cidr and Cilium). Must not overlap with other clusters on the same network."
+  type        = string
+  default     = "10.42.0.0/16"
+}
+
+variable "service_cidr" {
+  description = "CIDR for Kubernetes services (RKE2 service-cidr). Must not overlap with other clusters on the same network."
+  type        = string
+  default     = "10.43.0.0/16"
+}
+
 # =============================================================================
 # Worker Node Pools
 # =============================================================================

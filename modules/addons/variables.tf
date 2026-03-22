@@ -52,6 +52,12 @@ variable "private_network_name" {
   type        = string
 }
 
+variable "pod_cidr" {
+  description = "CIDR for Kubernetes pods. Used in Cilium IPAM and CCM clusterCIDR."
+  type        = string
+  default     = "10.42.0.0/16"
+}
+
 variable "private_network_id" {
   description = "ID of the Hetzner private network."
   type        = string

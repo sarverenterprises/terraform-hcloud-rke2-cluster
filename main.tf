@@ -24,6 +24,7 @@ module "networking" {
   location               = local.control_plane_location
   network_cidr           = var.network_cidr
   cluster_subnet_cidr    = var.cluster_subnet_cidr
+  existing_network_id    = var.existing_network_id
   enable_firewall        = var.enable_firewall
   trusted_ssh_cidrs      = var.trusted_ssh_cidrs
   kube_api_allowed_cidrs = var.kube_api_allowed_cidrs
@@ -62,6 +63,8 @@ module "control_plane" {
   control_plane_lb_ip = module.networking.control_plane_lb_ip
   first_cp_ip         = local.first_cp_private_ip
   cluster_subnet_cidr = var.cluster_subnet_cidr
+  pod_cidr            = var.pod_cidr
+  service_cidr        = var.service_cidr
 
   # Security
   enable_tailscale_nodes = var.enable_tailscale_nodes
@@ -230,6 +233,7 @@ module "addons" {
 
   private_network_name = module.networking.network_name
   private_network_id   = module.networking.network_id
+  pod_cidr             = var.pod_cidr
 
   # Worker pool info for autoscaler HCLOUD_CLUSTER_CONFIG
   node_pools                  = var.node_pools

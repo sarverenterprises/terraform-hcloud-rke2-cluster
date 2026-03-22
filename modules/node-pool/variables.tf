@@ -138,6 +138,18 @@ variable "first_node_static_ip" {
   default     = null
 }
 
+variable "pod_cidr" {
+  description = "CIDR for Kubernetes pods. Passed to RKE2 cluster-cidr in control plane cloud-init."
+  type        = string
+  default     = "10.42.0.0/16"
+}
+
+variable "service_cidr" {
+  description = "CIDR for Kubernetes services. Passed to RKE2 service-cidr in control plane cloud-init."
+  type        = string
+  default     = "10.43.0.0/16"
+}
+
 # =============================================================================
 # Tailscale
 # =============================================================================

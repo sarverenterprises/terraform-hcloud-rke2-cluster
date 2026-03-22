@@ -41,3 +41,9 @@ variable "nodeport_allowed_cidrs" {
   type        = list(string)
   default     = []
 }
+
+variable "existing_network_id" {
+  description = "ID of an existing Hetzner network to attach this cluster to. When set, no new network is created — only a subnet is added. Set to null (default) to create a fresh network."
+  type        = string
+  default     = null
+}

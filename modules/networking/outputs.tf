@@ -1,11 +1,11 @@
 output "network_id" {
   description = "ID of the Hetzner private network."
-  value       = hcloud_network.cluster.id
+  value       = local.network_id
 }
 
 output "network_name" {
   description = "Name of the Hetzner private network."
-  value       = hcloud_network.cluster.name
+  value       = local.network_name
 }
 
 output "subnet_id" {
