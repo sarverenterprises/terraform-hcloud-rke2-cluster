@@ -54,9 +54,9 @@ locals {
         rke2_token           = random_password.rke2_token.result
         control_plane_lb_ip  = module.networking.private_lb_ip
         has_labels           = length(p.labels) > 0
-        label_args           = join("\n", [for k, v in p.labels : "  - \"${k}=${v}\""])
+        label_args           = join("\n", [for k, v in p.labels : "        - \"${k}=${v}\""])
         has_taints           = length(p.taints) > 0
-        taint_args           = join("\n", [for t in p.taints : "  - \"${t.key}=${t.value}:${t.effect}\""])
+        taint_args           = join("\n", [for t in p.taints : "        - \"${t.key}=${t.value}:${t.effect}\""])
         longhorn_volume_size = p.longhorn_volume_size
         enable_tailscale     = var.enable_tailscale_nodes
         tailscale_auth_key   = coalesce(var.tailscale_node_auth_key, "")

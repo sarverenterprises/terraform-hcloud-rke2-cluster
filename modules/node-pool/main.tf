@@ -1,13 +1,15 @@
 locals {
-  # Taint string for RKE2 config (only set on worker pools)
+  # Taint string for RKE2 config (only set on worker pools).
+  # 8-space indentation: cloud-init strips 6 spaces of literal-block indent,
+  # leaving the correct 2-space sub-item indent in the written config.yaml.
   taint_args = join("\n", [
-    for t in var.taints : "  - \"${t.key}=${t.value}:${t.effect}\""
+    for t in var.taints : "        - \"${t.key}=${t.value}:${t.effect}\""
   ])
   has_taints = length(var.taints) > 0
 
-  # Label string for RKE2 config
+  # Label string for RKE2 config — same indentation rationale as taint_args.
   label_args = join("\n", [
-    for k, v in var.labels : "  - \"${k}=${v}\""
+    for k, v in var.labels : "        - \"${k}=${v}\""
   ])
   has_labels = length(var.labels) > 0
 }
