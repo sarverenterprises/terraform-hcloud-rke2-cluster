@@ -24,8 +24,9 @@ output "kubeconfig" {
     Available after `terraform apply` completes. Write to disk:
       terraform output -raw kubeconfig > kubeconfig.yaml
     IMPORTANT: The state backend must use encryption — this value is stored in plaintext in Terraform state.
+    Stored via terraform_data.kubeconfig_store so it persists across HCP Terraform remote runs.
   EOT
-  value       = fileexists(local.kubeconfig_path) ? file(local.kubeconfig_path) : null
+  value       = terraform_data.kubeconfig_store.output != "" ? terraform_data.kubeconfig_store.output : null
   sensitive   = true
 }
 

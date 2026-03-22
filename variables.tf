@@ -30,9 +30,10 @@ variable "location" {
 # =============================================================================
 
 variable "hcloud_token" {
-  description = "Default Hetzner Cloud API token. Used by any component-specific token that is null."
+  description = "Default Hetzner Cloud API token. Used by any component-specific token that is null. If null, the HCLOUD_TOKEN environment variable must be set for the hcloud provider."
   type        = string
   sensitive   = true
+  default     = null
 }
 
 variable "hcloud_ccm_token" {

@@ -19,9 +19,11 @@ locals {
   # ==========================================================================
   # Per-Component Hetzner Tokens
   # ==========================================================================
-  effective_ccm_token        = coalesce(var.hcloud_ccm_token, var.hcloud_token)
-  effective_csi_token        = coalesce(var.hcloud_csi_token, var.hcloud_token)
-  effective_autoscaler_token = coalesce(var.hcloud_autoscaler_token, var.hcloud_token)
+  # try() handles the case where both the component token and the default token
+  # are null (e.g. when HCLOUD_TOKEN is used for provider auth instead).
+  effective_ccm_token        = try(coalesce(var.hcloud_ccm_token, var.hcloud_token), null)
+  effective_csi_token        = try(coalesce(var.hcloud_csi_token, var.hcloud_token), null)
+  effective_autoscaler_token = try(coalesce(var.hcloud_autoscaler_token, var.hcloud_token), null)
 
   # ==========================================================================
   # Worker Node Counts (for Longhorn replica computation)
