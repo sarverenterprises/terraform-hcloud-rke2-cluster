@@ -69,5 +69,5 @@ locals {
   # ==========================================================================
   # Kubeconfig (written to disk by null_resource.fetch_kubeconfig)
   # ==========================================================================
-  kubeconfig_path = "${path.root}/.kube/${var.cluster_name}.yaml"
+  kubeconfig_path = abspath("${path.root}/.kube/${var.cluster_name}.yaml")
 }
