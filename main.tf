@@ -40,6 +40,7 @@ module "control_plane" {
   source = "./modules/node-pool"
 
   pool_name                = "${var.cluster_name}-cp"
+  cluster_name             = var.cluster_name
   role                     = "server"
   node_count               = 3
   server_type              = var.control_plane_server_type
@@ -89,15 +90,16 @@ module "worker_pools" {
 
   source = "./modules/node-pool"
 
-  pool_name   = "${var.cluster_name}-${each.key}"
-  role        = "agent"
-  node_count  = each.value.scaling_mode == "autoscaled" ? each.value.min_nodes : each.value.node_count
-  server_type = each.value.server_type
-  location    = coalesce(each.value.location, var.location)
-  os_image    = var.os_image
-  ssh_keys    = var.ssh_keys
-  network_id  = module.networking.network_id
-  subnet_id   = module.networking.subnet_id
+  pool_name    = "${var.cluster_name}-${each.key}"
+  cluster_name = var.cluster_name
+  role         = "agent"
+  node_count   = each.value.scaling_mode == "autoscaled" ? each.value.min_nodes : each.value.node_count
+  server_type  = each.value.server_type
+  location     = coalesce(each.value.location, var.location)
+  os_image     = var.os_image
+  ssh_keys     = var.ssh_keys
+  network_id   = module.networking.network_id
+  subnet_id    = module.networking.subnet_id
 
   # Worker pools do not use a placement group or LB registration
   placement_group_id   = null

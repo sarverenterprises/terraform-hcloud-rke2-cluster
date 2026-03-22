@@ -3,6 +3,11 @@ variable "pool_name" {
   type        = string
 }
 
+variable "cluster_name" {
+  description = "Cluster name — used for the 'cluster' server label so firewall label selectors match."
+  type        = string
+}
+
 variable "role" {
   description = "RKE2 role: 'server' for control plane, 'agent' for workers."
   type        = string

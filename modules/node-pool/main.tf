@@ -94,7 +94,7 @@ resource "hcloud_server" "nodes" {
   )
 
   labels = merge(
-    { cluster = split("-", var.pool_name)[0], pool = var.pool_name, role = var.role },
+    { cluster = var.cluster_name, pool = var.pool_name, role = var.role },
     var.labels
   )
 
@@ -167,7 +167,7 @@ resource "hcloud_volume" "longhorn_data" {
   location = var.location
   format   = "ext4"
 
-  labels = { cluster = split("-", var.pool_name)[0], pool = var.pool_name }
+  labels = { cluster = var.cluster_name, pool = var.pool_name }
 
   lifecycle {
     # Prevent accidental deletion — data loss if Longhorn is running
