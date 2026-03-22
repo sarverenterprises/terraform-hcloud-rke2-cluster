@@ -50,7 +50,7 @@ resource "hcloud_server" "nodes" {
       taint_args           = local.taint_args
       longhorn_volume_size = var.longhorn_volume_size
       enable_tailscale     = var.enable_tailscale_nodes
-      tailscale_auth_key   = coalesce(var.tailscale_auth_key, "")
+      tailscale_auth_key   = var.tailscale_auth_key != null ? var.tailscale_auth_key : ""
       hostname             = "${var.pool_name}-0"
     })
     : var.role == "server"
@@ -67,7 +67,7 @@ resource "hcloud_server" "nodes" {
       taint_args           = local.taint_args
       longhorn_volume_size = var.longhorn_volume_size
       enable_tailscale     = var.enable_tailscale_nodes
-      tailscale_auth_key   = coalesce(var.tailscale_auth_key, "")
+      tailscale_auth_key   = var.tailscale_auth_key != null ? var.tailscale_auth_key : ""
       hostname             = "${var.pool_name}-${count.index}"
     })
     : templatefile("${path.module}/templates/worker-init.yaml.tpl", {
@@ -80,7 +80,7 @@ resource "hcloud_server" "nodes" {
       taint_args           = local.taint_args
       longhorn_volume_size = var.longhorn_volume_size
       enable_tailscale     = var.enable_tailscale_nodes
-      tailscale_auth_key   = coalesce(var.tailscale_auth_key, "")
+      tailscale_auth_key   = var.tailscale_auth_key != null ? var.tailscale_auth_key : ""
       hostname             = "${var.pool_name}-${count.index}"
     })
   )
