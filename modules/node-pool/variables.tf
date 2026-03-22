@@ -62,6 +62,12 @@ variable "lb_id" {
   default     = null
 }
 
+variable "attach_to_lb" {
+  description = "Whether to register nodes with the load balancer. Must be a static bool (not derived from lb_id) so count is known at plan time."
+  type        = bool
+  default     = false
+}
+
 variable "assign_public_ip" {
   description = "Assign a public IPv4 to each node. Default true for CP, false for workers."
   type        = bool

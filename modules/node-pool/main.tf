@@ -123,7 +123,7 @@ resource "hcloud_server_network" "nodes" {
 # =============================================================================
 
 resource "hcloud_load_balancer_target" "cp" {
-  count = var.lb_id != null ? var.node_count : 0
+  count = var.attach_to_lb ? var.node_count : 0
 
   type             = "server"
   load_balancer_id = var.lb_id
