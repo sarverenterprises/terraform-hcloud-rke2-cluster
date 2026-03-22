@@ -254,6 +254,13 @@ module "addons" {
   # Tailscale operator
   tailscale_operator_auth_key = var.tailscale_operator_auth_key
 
+  # Argo CD
+  enable_argocd               = var.enable_argocd
+  argocd_hostname             = var.argocd_hostname
+  argocd_github_client_id     = var.argocd_github_client_id
+  argocd_github_client_secret = var.argocd_github_client_secret
+  argocd_dex_connectors       = var.argocd_dex_connectors
+
   # Chart versions
   cilium_chart_version             = var.cilium_chart_version
   hcloud_ccm_chart_version         = var.hcloud_ccm_chart_version
@@ -265,6 +272,8 @@ module "addons" {
   flux_version                     = var.flux_version
   cluster_autoscaler_chart_version = var.cluster_autoscaler_chart_version
   cluster_autoscaler_image_tag     = var.cluster_autoscaler_image_tag
+  argocd_chart_version             = var.argocd_chart_version
+  argo_rollouts_chart_version      = var.argo_rollouts_chart_version
 
   depends_on = [null_resource.fetch_kubeconfig]
 }

@@ -299,6 +299,42 @@ variable "grafana_hostname" {
 }
 
 # =============================================================================
+# Argo CD
+# =============================================================================
+
+variable "enable_argocd" {
+  description = "Deploy Argo CD and Argo Rollouts."
+  type        = bool
+  default     = false
+}
+
+variable "argocd_hostname" {
+  description = "Hostname for Argo CD ingress. When null, no Ingress is created — access via kubectl port-forward."
+  type        = string
+  default     = null
+}
+
+variable "argocd_github_client_id" {
+  description = "GitHub OAuth App client ID for Dex SSO. Required together with argocd_github_client_secret to enable GitHub login."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "argocd_github_client_secret" {
+  description = "GitHub OAuth App client secret for Dex SSO."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "argocd_dex_connectors" {
+  description = "Raw Dex connectors YAML string. When set, overrides the auto-wired GitHub connector entirely. Use this for non-GitHub providers (Google, LDAP, OIDC, etc.)."
+  type        = string
+  default     = null
+}
+
+# =============================================================================
 # Chart Versions
 # =============================================================================
 
@@ -360,4 +396,16 @@ variable "cluster_autoscaler_image_tag" {
   description = "Cluster Autoscaler container image tag."
   type        = string
   default     = "v1.32.7"
+}
+
+variable "argocd_chart_version" {
+  description = "Argo CD Helm chart version."
+  type        = string
+  default     = "~> 9.4"
+}
+
+variable "argo_rollouts_chart_version" {
+  description = "Argo Rollouts Helm chart version."
+  type        = string
+  default     = "~> 2.40"
 }

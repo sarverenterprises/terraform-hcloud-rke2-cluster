@@ -10,3 +10,21 @@ output "flux_public_key" {
   value       = var.enable_flux ? tls_private_key.flux[0].public_key_openssh : null
   sensitive   = false
 }
+
+# ---------------------------------------------------------------------------
+# Argo CD
+# ---------------------------------------------------------------------------
+
+output "argocd_admin_password_hint" {
+  description = <<-EOT
+    Argo CD generates an initial admin password on first install and stores it in
+    a Kubernetes Secret. Retrieve it after apply with:
+
+      kubectl -n argocd get secret argocd-initial-admin-secret \
+        -o jsonpath='{.data.password}' | base64 -d
+
+    This secret is automatically deleted once the admin password is changed via
+    the Argo CD UI or CLI (argocd account update-password).
+  EOT
+  value       = var.enable_argocd ? "See output description for kubectl retrieval command." : null
+}

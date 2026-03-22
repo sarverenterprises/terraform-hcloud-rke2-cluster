@@ -403,6 +403,42 @@ variable "grafana_hostname" {
 }
 
 # =============================================================================
+# Argo CD (required when enable_argocd = true)
+# =============================================================================
+
+variable "enable_argocd" {
+  description = "Deploy Argo CD and Argo Rollouts."
+  type        = bool
+  default     = false
+}
+
+variable "argocd_hostname" {
+  description = "Hostname for Argo CD ingress (e.g. 'argocd.example.com'). When null, no Ingress is created — access via kubectl port-forward. Requires enable_ingress = true when set."
+  type        = string
+  default     = null
+}
+
+variable "argocd_github_client_id" {
+  description = "GitHub OAuth App client ID for Argo CD Dex SSO. Provide together with argocd_github_client_secret to enable GitHub login."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "argocd_github_client_secret" {
+  description = "GitHub OAuth App client secret for Argo CD Dex SSO."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "argocd_dex_connectors" {
+  description = "Raw Dex connectors YAML string. When set, overrides the auto-wired GitHub connector. Use for non-GitHub providers (Google, LDAP, OIDC, etc.)."
+  type        = string
+  default     = null
+}
+
+# =============================================================================
 # Outputs
 # =============================================================================
 
@@ -474,4 +510,16 @@ variable "cluster_autoscaler_image_tag" {
   description = "Cluster Autoscaler container image tag. Must match cluster Kubernetes minor version (e.g., v1.32.7 for K8s 1.32)."
   type        = string
   default     = "v1.32.7"
+}
+
+variable "argocd_chart_version" {
+  description = "Argo CD Helm chart version."
+  type        = string
+  default     = "~> 9.4"
+}
+
+variable "argo_rollouts_chart_version" {
+  description = "Argo Rollouts Helm chart version."
+  type        = string
+  default     = "~> 2.40"
 }
