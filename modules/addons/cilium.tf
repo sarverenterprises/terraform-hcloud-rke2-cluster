@@ -119,11 +119,17 @@ resource "null_resource" "block_metadata_api" {
       metadata:
         name: block-metadata-api
       spec:
-        endpointSelector: {}
+        # Apply to non-system namespaces only.
+        # kube-system pods (hcloud-csi, hcloud-ccm) legitimately need the
+        # Hetzner metadata API to determine node location and instance ID.
+        endpointSelector:
+          matchExpressions:
+          - key: io.kubernetes.pod.namespace
+            operator: NotIn
+            values: [kube-system, kube-public, kube-node-lease]
         # Explicitly allow all egress to all entities so only the deny
-        # below takes effect. Without egress allows, Cilium's default-deny
-        # mode blocks ALL pod egress — not just the metadata API.
-        # toEntities: ["all"] is required; egress: [{}] is silently ignored.
+        # below takes effect. toEntities: ["all"] is required; egress: [{}]
+        # is silently ignored by Cilium and still triggers default-deny mode.
         egress:
         - toEntities:
           - "all"
@@ -149,8 +155,18 @@ resource "kubernetes_manifest" "block_metadata_api" {
       name = "block-metadata-api"
     }
     spec = {
-      # Empty selector — applies to all endpoints in the cluster
-      endpointSelector = {}
+      # Apply to non-system namespaces only.
+      # kube-system pods (hcloud-csi, hcloud-ccm) legitimately need the
+      # Hetzner metadata API to determine node location and instance ID.
+      endpointSelector = {
+        matchExpressions = [
+          {
+            key      = "io.kubernetes.pod.namespace"
+            operator = "NotIn"
+            values   = ["kube-system", "kube-public", "kube-node-lease"]
+          }
+        ]
+      }
       # Explicitly allow all egress to all entities so only the deny
       # below takes effect. toEntities: ["all"] is required; egress: [{}]
       # is silently ignored by Cilium and still triggers default-deny mode.
