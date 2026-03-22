@@ -42,6 +42,7 @@ resource "hcloud_server" "nodes" {
       rke2_token           = var.rke2_token
       control_plane_lb_ip  = var.control_plane_lb_ip
       node_ip              = var.first_node_static_ip # static, known at plan time
+      first_cp_ip          = null                     # unused for init node; required by template
       cluster_init         = true
       has_labels           = local.has_labels
       label_args           = local.label_args
