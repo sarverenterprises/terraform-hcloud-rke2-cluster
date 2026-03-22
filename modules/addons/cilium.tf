@@ -120,6 +120,13 @@ resource "null_resource" "block_metadata_api" {
         name: block-metadata-api
       spec:
         endpointSelector: {}
+        # Explicitly allow all egress to all entities so only the deny
+        # below takes effect. Without egress allows, Cilium's default-deny
+        # mode blocks ALL pod egress — not just the metadata API.
+        # toEntities: ["all"] is required; egress: [{}] is silently ignored.
+        egress:
+        - toEntities:
+          - "all"
         egressDeny:
         - toCIDR:
           - 169.254.169.254/32
@@ -144,11 +151,11 @@ resource "kubernetes_manifest" "block_metadata_api" {
     spec = {
       # Empty selector — applies to all endpoints in the cluster
       endpointSelector = {}
-      egressDeny = [
-        {
-          toCIDR = ["169.254.169.254/32"]
-        }
-      ]
+      # Explicitly allow all egress to all entities so only the deny
+      # below takes effect. toEntities: ["all"] is required; egress: [{}]
+      # is silently ignored by Cilium and still triggers default-deny mode.
+      egress     = [{ toEntities = ["all"] }]
+      egressDeny = [{ toCIDR = ["169.254.169.254/32"] }]
     }
   }
 
