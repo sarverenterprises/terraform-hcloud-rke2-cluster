@@ -28,6 +28,20 @@ resource "hcloud_network_subnet" "cluster" {
 }
 
 # =============================================================================
+# Firewall Attachment
+# Attaches the firewall to all servers in this cluster using a label selector.
+# Without this, hcloud_firewall rules have no effect — the resource alone
+# creates the rule set but does not apply it to any servers.
+# =============================================================================
+
+resource "hcloud_firewall_attachment" "cluster" {
+  count       = var.enable_firewall ? 1 : 0
+  firewall_id = hcloud_firewall.cluster[0].id
+
+  label_selectors = ["cluster=${var.cluster_name}"]
+}
+
+# =============================================================================
 # Placement Group (spread — one node per physical host where possible)
 # =============================================================================
 
