@@ -13,6 +13,16 @@ output "private_network_id" {
   value       = module.networking.network_id
 }
 
+output "private_network_name" {
+  description = "Name of the Hetzner private network created for the cluster."
+  value       = module.networking.network_name
+}
+
+output "cluster_subnet_cidr" {
+  description = "CIDR of the cluster subnet. Passed through for downstream workspaces."
+  value       = var.cluster_subnet_cidr
+}
+
 output "node_pool_names" {
   description = "Names of all worker node pools."
   value       = [for p in var.node_pools : p.name]
@@ -24,8 +34,9 @@ output "kubeconfig" {
     Available after `terraform apply` completes. Write to disk:
       terraform output -raw kubeconfig > kubeconfig.yaml
     IMPORTANT: The state backend must use encryption — this value is stored in plaintext in Terraform state.
+    Stored via terraform_data.kubeconfig_store so it persists across HCP Terraform remote runs.
   EOT
-  value       = fileexists(local.kubeconfig_path) ? file(local.kubeconfig_path) : null
+  value       = terraform_data.kubeconfig_store.output != "" ? terraform_data.kubeconfig_store.output : null
   sensitive   = true
 }
 

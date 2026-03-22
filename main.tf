@@ -188,6 +188,27 @@ resource "null_resource" "fetch_kubeconfig" {
 }
 
 # =============================================================================
+# Kubeconfig State Persistence
+#
+# Stores the kubeconfig in Terraform state so that HCP Terraform remote runs
+# (which have no persistent filesystem between phases) can access it in Phase 2.
+# The terraform_data resource's output attribute is persisted in state, unlike
+# null_resource triggers or data "local_file" which require the file on disk.
+# =============================================================================
+
+resource "terraform_data" "kubeconfig_store" {
+  depends_on = [null_resource.fetch_kubeconfig]
+
+  # Re-run whenever the kubeconfig file changes (new cluster or LB IP change).
+  triggers_replace = [
+    join(",", module.control_plane.server_ids),
+    module.networking.control_plane_lb_ip,
+  ]
+
+  input = sensitive(fileexists(local.kubeconfig_path) ? file(local.kubeconfig_path) : "")
+}
+
+# =============================================================================
 # Add-ons
 # Called after the cluster is ready. Requires Helm + Kubernetes providers to be
 # configured by the root module (examples/) using the fetched kubeconfig.
