@@ -40,6 +40,7 @@ resource "helm_release" "hcloud_csi" {
   atomic  = true
   timeout = 300
 
-  # Secret must exist before CSI starts — it reads it at startup.
-  depends_on = [kubernetes_secret_v1.hcloud_csi[0]]
+  # Cilium must finish before CSI can deploy — same reasoning as CCM:
+  # CSI node pods require cluster networking to become Ready.
+  depends_on = [kubernetes_secret_v1.hcloud_csi[0], helm_release.cilium]
 }

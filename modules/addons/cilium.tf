@@ -105,7 +105,14 @@ resource "null_resource" "block_metadata_api" {
   }
 
   provisioner "local-exec" {
+    # Wait for the CRD to be established before applying — Helm marks the
+    # release complete once pods are Ready, but CRD schema propagation through
+    # the API aggregation layer can lag by a few seconds.
     command     = <<-EOT
+      kubectl --kubeconfig '${var.kubeconfig_path}' \
+        wait --for=condition=established \
+        crd/ciliumclusterwidenetworkpolicies.cilium.io \
+        --timeout=120s
       kubectl --kubeconfig '${var.kubeconfig_path}' apply -f - <<'POLICY'
       apiVersion: cilium.io/v2
       kind: CiliumClusterwideNetworkPolicy

@@ -54,6 +54,10 @@ resource "helm_release" "hcloud_ccm" {
     })
   ]
 
-  # Secret must exist before CCM starts — it reads it at startup.
-  depends_on = [kubernetes_secret_v1.hcloud_ccm[0]]
+  # Cilium must finish before CCM can deploy: CCM pods require cluster
+  # networking to become Ready, and networking is provided by Cilium.
+  # Without this dependency, Terraform deploys CCM in parallel with Cilium
+  # and CCM times out (5 min) waiting for pods that can't start until
+  # Cilium has set up the node network stack.
+  depends_on = [kubernetes_secret_v1.hcloud_ccm[0], helm_release.cilium]
 }
