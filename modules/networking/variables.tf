@@ -31,9 +31,15 @@ variable "trusted_ssh_cidrs" {
 }
 
 variable "kube_api_allowed_cidrs" {
-  description = "CIDRs allowed to reach the Kubernetes API server (port 6443)."
+  description = "CIDRs allowed to reach the Kubernetes API server (port 6443). Default [] = closed to public; cluster_subnet_cidr is always added for LB→CP forwarding."
   type        = list(string)
-  default     = ["0.0.0.0/0", "::/0"]
+  default     = []
+}
+
+variable "lb_private_ip" {
+  description = "Static private IP to assign to the control plane load balancer within the cluster subnet. Set this to a known address (e.g. cidrhost(cluster_subnet_cidr, 1)) so kubeconfig and tls-san use a stable, non-public IP. Null = Hetzner assigns automatically."
+  type        = string
+  default     = null
 }
 
 variable "nodeport_allowed_cidrs" {

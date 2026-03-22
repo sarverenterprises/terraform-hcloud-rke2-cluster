@@ -38,11 +38,13 @@ resource "hcloud_firewall" "cluster" {
   }
 
   # ---- Kubernetes API server (TCP 6443) ------------------------------------
+  # cluster_subnet_cidr is always included so the LB can forward health checks
+  # and API traffic to CP nodes via private IP even when kube_api_allowed_cidrs=[].
   rule {
     direction   = "in"
     protocol    = "tcp"
     port        = "6443"
-    source_ips  = var.kube_api_allowed_cidrs
+    source_ips  = concat([var.cluster_subnet_cidr], var.kube_api_allowed_cidrs)
     description = "Kubernetes API server"
   }
 

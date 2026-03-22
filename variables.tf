@@ -127,6 +127,12 @@ variable "existing_network_id" {
   default     = null
 }
 
+variable "lb_private_ip" {
+  description = "Static private IP to pin the control plane load balancer to within the cluster subnet. Use this to give the LB a stable address for kubeconfig and tls-san (e.g. the .1 host of cluster_subnet_cidr). Null = Hetzner assigns automatically."
+  type        = string
+  default     = null
+}
+
 variable "pod_cidr" {
   description = "CIDR for Kubernetes pods (RKE2 cluster-cidr and Cilium). Must not overlap with other clusters on the same network."
   type        = string

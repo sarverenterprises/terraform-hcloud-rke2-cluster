@@ -4,8 +4,13 @@ output "cluster_name" {
 }
 
 output "control_plane_lb_ip" {
-  description = "Public IPv4 address of the control plane load balancer. Use this as the kubeconfig server address."
+  description = "Public IPv4 address of the control plane load balancer."
   value       = module.networking.control_plane_lb_ip
+}
+
+output "private_lb_ip" {
+  description = "Private IPv4 address of the control plane load balancer. Used as the kubeconfig server address and tls-san — API access routes through Tailscale, not the public internet."
+  value       = module.networking.private_lb_ip
 }
 
 output "private_network_id" {

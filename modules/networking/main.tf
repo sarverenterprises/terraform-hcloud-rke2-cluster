@@ -54,10 +54,13 @@ resource "hcloud_load_balancer" "control_plane" {
   }
 }
 
-# Attach the LB to the private network so CCM can reach nodes via private IPs
+# Attach the LB to the private network so CCM can reach nodes via private IPs.
+# ip pins the LB's private IP to a known stable address — used by kubeconfig and
+# tls-san so API access never depends on the public LB IP.
 resource "hcloud_load_balancer_network" "control_plane" {
   load_balancer_id = hcloud_load_balancer.control_plane.id
   network_id       = local.network_id
+  ip               = var.lb_private_ip
 }
 
 # Kubernetes API server (port 6443)

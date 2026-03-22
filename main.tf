@@ -29,6 +29,7 @@ module "networking" {
   trusted_ssh_cidrs      = var.trusted_ssh_cidrs
   kube_api_allowed_cidrs = var.kube_api_allowed_cidrs
   nodeport_allowed_cidrs = var.nodeport_allowed_cidrs
+  lb_private_ip          = var.lb_private_ip
 }
 
 # =============================================================================
@@ -60,7 +61,7 @@ module "control_plane" {
   # Cloud-init
   rke2_version        = var.rke2_version
   rke2_token          = random_password.rke2_token.result
-  control_plane_lb_ip = module.networking.control_plane_lb_ip
+  control_plane_lb_ip = module.networking.private_lb_ip
   first_cp_ip         = local.first_cp_private_ip
   cluster_subnet_cidr = var.cluster_subnet_cidr
   pod_cidr            = var.pod_cidr
@@ -111,7 +112,7 @@ module "worker_pools" {
   # Cloud-init
   rke2_version        = var.rke2_version
   rke2_token          = random_password.rke2_token.result
-  control_plane_lb_ip = module.networking.control_plane_lb_ip
+  control_plane_lb_ip = module.networking.private_lb_ip
   first_cp_ip         = local.first_cp_private_ip
   cluster_subnet_cidr = var.cluster_subnet_cidr
 
@@ -181,7 +182,7 @@ resource "null_resource" "fetch_kubeconfig" {
         -i <(printf '%s' "$SSHKEY") \
         root@${module.control_plane.first_node_public_ip} \
         "cat /etc/rancher/rke2/rke2.yaml" \
-        | sed 's|https://127.0.0.1:6443|https://${module.networking.control_plane_lb_ip}:6443|g' \
+        | sed 's|https://127.0.0.1:6443|https://${module.networking.private_lb_ip}:6443|g' \
         > "${local.kubeconfig_path}"
       chmod 600 "${local.kubeconfig_path}"
       echo "Kubeconfig written to ${local.kubeconfig_path}"
@@ -240,7 +241,7 @@ module "addons" {
   autoscaler_pool_cloud_inits = local.autoscaler_pool_cloud_inits
   rke2_cluster_token          = random_password.rke2_token.result
   rke2_version                = var.rke2_version
-  control_plane_lb_ip         = module.networking.control_plane_lb_ip
+  control_plane_lb_ip         = module.networking.private_lb_ip
   cluster_subnet_cidr         = var.cluster_subnet_cidr
   os_image                    = var.os_image
 

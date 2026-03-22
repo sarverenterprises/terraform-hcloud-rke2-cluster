@@ -52,7 +52,7 @@ locals {
       {
         rke2_version         = var.rke2_version
         rke2_token           = random_password.rke2_token.result
-        control_plane_lb_ip  = module.networking.control_plane_lb_ip
+        control_plane_lb_ip  = module.networking.private_lb_ip
         has_labels           = length(p.labels) > 0
         label_args           = join("\n", [for k, v in p.labels : "  - \"${k}=${v}\""])
         has_taints           = length(p.taints) > 0

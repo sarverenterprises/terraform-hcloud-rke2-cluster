@@ -54,6 +54,7 @@ resource "hcloud_server" "nodes" {
       hostname             = "${var.pool_name}-0"
       pod_cidr             = var.pod_cidr
       service_cidr         = var.service_cidr
+      cluster_subnet_cidr  = var.cluster_subnet_cidr
     })
     : var.role == "server"
     ? templatefile("${path.module}/templates/cp-init.yaml.tpl", {
@@ -73,6 +74,7 @@ resource "hcloud_server" "nodes" {
       hostname             = "${var.pool_name}-${count.index}"
       pod_cidr             = var.pod_cidr
       service_cidr         = var.service_cidr
+      cluster_subnet_cidr  = var.cluster_subnet_cidr
     })
     : templatefile("${path.module}/templates/worker-init.yaml.tpl", {
       rke2_version         = var.rke2_version

@@ -33,6 +33,11 @@ output "control_plane_lb_ip" {
   value       = hcloud_load_balancer.control_plane.ipv4
 }
 
+output "private_lb_ip" {
+  description = "Private IPv4 address of the control plane load balancer within the cluster subnet. Use for kubeconfig server URL and tls-san — avoids public internet exposure of the API server."
+  value       = hcloud_load_balancer_network.control_plane.ip
+}
+
 output "firewall_id" {
   description = "ID of the cluster firewall. Null if enable_firewall=false."
   value       = var.enable_firewall ? hcloud_firewall.cluster[0].id : null
