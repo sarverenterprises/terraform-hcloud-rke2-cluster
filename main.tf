@@ -183,6 +183,7 @@ resource "null_resource" "fetch_kubeconfig" {
       chmod 600 "${local.kubeconfig_path}"
       echo "Kubeconfig written to ${local.kubeconfig_path}"
     EOT
+    interpreter = ["/bin/bash", "-c"]
     environment = {
       SSHKEY = var.ssh_private_key
     }
