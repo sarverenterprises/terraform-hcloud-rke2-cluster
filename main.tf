@@ -157,12 +157,12 @@ resource "null_resource" "wait_for_cluster" {
       echo "Waiting for Kubernetes API at https://$LB_IP:6443/healthz ..." >&2
       until [ "$attempt" -ge "$MAX_ATTEMPTS" ]; do
         attempt=$(( attempt + 1 ))
-        status=$(curl -k -s -o /dev/null -w "%{http_code}" "https://$LB_IP:6443/healthz" 2>/dev/null || true)
+        status=$(curl -k -s -o /dev/null -w "%%{http_code}" "https://$LB_IP:6443/healthz" 2>/dev/null || true)
         if [ "$status" = "200" ]; then
           echo "API server is healthy (attempt $attempt)." >&2
           exit 0
         fi
-        echo "Attempt $attempt/$MAX_ATTEMPTS: HTTP $status — retrying in ${SLEEP_SEC}s ..." >&2
+        echo "Attempt $attempt/$MAX_ATTEMPTS: HTTP $status — retrying in $${SLEEP_SEC}s ..." >&2
         sleep "$SLEEP_SEC"
       done
       echo "ERROR: API server at https://$LB_IP:6443/healthz did not become healthy after $(( MAX_ATTEMPTS * SLEEP_SEC ))s." >&2
