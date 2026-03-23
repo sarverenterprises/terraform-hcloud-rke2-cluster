@@ -27,7 +27,7 @@ resource "helm_release" "cilium" {
 
   wait    = true
   atomic  = true
-  timeout = 300
+  timeout = 600
 
   values = [
     yamlencode({
