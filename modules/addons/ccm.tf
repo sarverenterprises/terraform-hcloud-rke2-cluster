@@ -56,8 +56,7 @@ resource "helm_release" "hcloud_ccm" {
 
   # Cilium must finish before CCM can deploy: CCM pods require cluster
   # networking to become Ready, and networking is provided by Cilium.
-  # Without this dependency, Terraform deploys CCM in parallel with Cilium
-  # and CCM times out (5 min) waiting for pods that can't start until
-  # Cilium has set up the node network stack.
-  depends_on = [kubernetes_secret_v1.hcloud_ccm[0], helm_release.cilium]
+  # wait_for_coredns ensures CoreDNS is up before CCM starts — CCM resolves
+  # Hetzner API endpoints by hostname and needs DNS available at startup.
+  depends_on = [kubernetes_secret_v1.hcloud_ccm[0], null_resource.wait_for_coredns]
 }

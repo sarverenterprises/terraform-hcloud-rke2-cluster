@@ -3,6 +3,40 @@
 # cluster_init=${cluster_init} — true for first node (initializes cluster), false for joiners
 
 write_files:
+  # ---------------------------------------------------------------------------
+  # etcd orphan-recovery script
+  #
+  # If rke2-server crashes mid-run, etcd (its subprocess) keeps running as an
+  # orphan with stale member state. On the next rke2-server start, the two
+  # processes cannot reconnect — etcd rejects rke2-server's TLS handshake
+  # indefinitely. This ExecStartPre script detects that condition and clears it.
+  #
+  # Safety: the script only acts when etcd is running WITHOUT rke2-server (the
+  # crash scenario). In a normal graceful stop, rke2-server also stops etcd, so
+  # pgrep finds nothing and the script is a no-op.
+  # ---------------------------------------------------------------------------
+  - path: /usr/local/bin/rke2-etcd-recovery.sh
+    owner: root:root
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      MEMBER_DIR="/var/lib/rancher/rke2/server/db/etcd/member"
+      ETCD_PID=$(pgrep -f "/var/lib/rancher/rke2/data/.*/bin/etcd" 2>/dev/null || true)
+      if [ -n "$ETCD_PID" ] && [ -d "$MEMBER_DIR" ]; then
+        echo "rke2-etcd-recovery: orphaned etcd (PID $ETCD_PID) detected — killing and clearing member dir"
+        kill -9 "$ETCD_PID" 2>/dev/null || true
+        sleep 2
+        rm -rf "$MEMBER_DIR"
+        echo "rke2-etcd-recovery: cleared — rke2-server will reinitialize etcd"
+      fi
+
+  - path: /etc/systemd/system/rke2-server.service.d/10-etcd-recovery.conf
+    owner: root:root
+    permissions: '0644'
+    content: |
+      [Service]
+      ExecStartPre=/usr/local/bin/rke2-etcd-recovery.sh
+
   - path: /etc/rancher/rke2/config.yaml
     owner: root:root
     permissions: '0600'
@@ -93,6 +127,9 @@ runcmd:
 
   # Create required directories
   - mkdir -p /var/lib/rancher/rke2/server/manifests/
+
+  # Reload systemd so the etcd-recovery drop-in is picked up before starting.
+  - systemctl daemon-reload
 
   # Enable and start RKE2 server service
   - systemctl enable rke2-server.service

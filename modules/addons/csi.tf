@@ -40,7 +40,9 @@ resource "helm_release" "hcloud_csi" {
   atomic  = true
   timeout = 300
 
-  # Cilium must finish before CSI can deploy — same reasoning as CCM:
-  # CSI node pods require cluster networking to become Ready.
-  depends_on = [kubernetes_secret_v1.hcloud_csi[0], helm_release.cilium]
+  # wait_for_coredns ensures CoreDNS is up before CSI starts. The CSI
+  # controller resolves api.hetzner.cloud by hostname; without DNS it exits
+  # with code 2 and crash-loops until CoreDNS becomes available (~25 restarts
+  # on a fresh deploy). Waiting here eliminates that crash-loop entirely.
+  depends_on = [kubernetes_secret_v1.hcloud_csi[0], null_resource.wait_for_coredns]
 }
