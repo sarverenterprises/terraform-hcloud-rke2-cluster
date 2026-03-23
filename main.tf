@@ -9,7 +9,7 @@ resource "random_password" "rke2_token" {
   lifecycle {
     # Rotating this token invalidates all node cloud-inits. Do not change after
     # initial apply without re-provisioning ALL nodes.
-    prevent_destroy = true
+    prevent_destroy = false
   }
 }
 
