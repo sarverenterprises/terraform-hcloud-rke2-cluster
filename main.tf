@@ -142,27 +142,32 @@ resource "null_resource" "wait_for_cluster" {
   depends_on = [module.control_plane]
 
   triggers = {
-    cp_ids = join(",", module.control_plane.server_ids)
+    lb_ip = module.networking.control_plane_lb_ip
   }
 
-  connection {
-    type        = "ssh"
-    host        = module.control_plane.first_node_public_ip
-    user        = "root"
-    private_key = var.ssh_private_key
-    timeout     = "15m"
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      # Wait for RKE2 server service to be active
-      "until systemctl is-active rke2-server --quiet 2>/dev/null; do echo 'Waiting for rke2-server...'; sleep 10; done",
-      # Wait for the kubeconfig file to appear
-      "until [ -f /etc/rancher/rke2/rke2.yaml ]; do echo 'Waiting for kubeconfig...'; sleep 5; done",
-      # Wait for the API server to be reachable
-      "timeout 300 bash -c 'until /var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml get nodes --request-timeout=5s &>/dev/null; do sleep 10; done'",
-      "echo 'Cluster API server ready.'",
-    ]
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+    environment = {
+      LB_IP = module.networking.control_plane_lb_ip
+    }
+    command = <<-EOT
+      MAX_ATTEMPTS=60
+      SLEEP_SEC=5
+      attempt=0
+      echo "Waiting for Kubernetes API at https://$LB_IP:6443/healthz ..." >&2
+      until [ "$attempt" -ge "$MAX_ATTEMPTS" ]; do
+        attempt=$(( attempt + 1 ))
+        status=$(curl -k -s -o /dev/null -w "%{http_code}" "https://$LB_IP:6443/healthz" 2>/dev/null || true)
+        if [ "$status" = "200" ]; then
+          echo "API server is healthy (attempt $attempt)." >&2
+          exit 0
+        fi
+        echo "Attempt $attempt/$MAX_ATTEMPTS: HTTP $status — retrying in ${SLEEP_SEC}s ..." >&2
+        sleep "$SLEEP_SEC"
+      done
+      echo "ERROR: API server at https://$LB_IP:6443/healthz did not become healthy after $(( MAX_ATTEMPTS * SLEEP_SEC ))s." >&2
+      exit 1
+    EOT
   }
 }
 
