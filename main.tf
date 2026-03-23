@@ -158,7 +158,7 @@ resource "null_resource" "wait_for_cluster" {
       until [ "$attempt" -ge "$MAX_ATTEMPTS" ]; do
         attempt=$(( attempt + 1 ))
         status=$(curl -k -s -o /dev/null -w "%%{http_code}" "https://$LB_IP:6443/healthz" 2>/dev/null || true)
-        if [ "$status" = "200" ]; then
+        if [ "$status" = "200" ] || [ "$status" = "401" ] || [ "$status" = "403" ]; then
           echo "API server is healthy (attempt $attempt)." >&2
           exit 0
         fi
