@@ -49,7 +49,7 @@ resource "null_resource" "wait_for_coredns" {
         if kubectl --kubeconfig "$KUBECONFIG_PATH" \
           wait pods -n kube-system -l k8s-app=kube-dns \
           --for=condition=Ready --timeout=5s 2>/dev/null; then
-          echo "CoreDNS is ready (${ELAPSED}s elapsed)"
+          echo "CoreDNS is ready ($${ELAPSED}s elapsed)"
           exit 0
         fi
 
@@ -68,12 +68,12 @@ resource "null_resource" "wait_for_coredns" {
           fi
         fi
 
-        echo "  ${ELAPSED}s elapsed: CoreDNS not ready yet, retrying in ${POLL_INTERVAL}s..."
+        echo "  $${ELAPSED}s elapsed: CoreDNS not ready yet, retrying in $${POLL_INTERVAL}s..."
         sleep "$POLL_INTERVAL"
         ELAPSED=$(( ELAPSED + POLL_INTERVAL ))
       done
 
-      echo "ERROR: CoreDNS did not become ready after ${MAX_WAIT}s" >&2
+      echo "ERROR: CoreDNS did not become ready after $${MAX_WAIT}s" >&2
       exit 1
     EOT
     interpreter = ["/bin/bash", "-c"]
