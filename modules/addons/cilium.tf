@@ -108,11 +108,26 @@ resource "null_resource" "block_metadata_api" {
     # Wait for the CRD to be established before applying — Helm marks the
     # release complete once pods are Ready, but CRD schema propagation through
     # the API aggregation layer can lag by a few seconds.
+    #
+    # kubectl wait --for=condition=established exits immediately with
+    # "Error from server (NotFound)" if the resource does not exist yet — it
+    # only waits on the condition of an already-present resource. Poll with
+    # kubectl get until the CRD appears, then use wait --for=condition=established
+    # to confirm it is fully registered.
     command     = <<-EOT
+      echo "Waiting for CRD ciliumclusterwidenetworkpolicies.cilium.io to appear..."
+      for i in $(seq 1 24); do
+        kubectl --kubeconfig '${var.kubeconfig_path}' \
+          get crd ciliumclusterwidenetworkpolicies.cilium.io \
+          --ignore-not-found 2>/dev/null | grep -q ciliumclusterwidenetworkpolicies \
+          && break
+        echo "  attempt $i/24: CRD not found yet, retrying in 5s..."
+        sleep 5
+      done
       kubectl --kubeconfig '${var.kubeconfig_path}' \
         wait --for=condition=established \
         crd/ciliumclusterwidenetworkpolicies.cilium.io \
-        --timeout=120s
+        --timeout=60s
       kubectl --kubeconfig '${var.kubeconfig_path}' apply -f - <<'POLICY'
       apiVersion: cilium.io/v2
       kind: CiliumClusterwideNetworkPolicy
