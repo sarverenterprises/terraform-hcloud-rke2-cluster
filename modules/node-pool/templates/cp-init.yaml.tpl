@@ -20,14 +20,15 @@ write_files:
     permissions: '0755'
     content: |
       #!/bin/bash
-      MEMBER_DIR="/var/lib/rancher/rke2/server/db/etcd/member"
-      ETCD_PID=$(pgrep -f "/var/lib/rancher/rke2/data/.*/bin/etcd" 2>/dev/null || true)
-      if [ -n "$ETCD_PID" ] && [ -d "$MEMBER_DIR" ]; then
-        echo "rke2-etcd-recovery: orphaned etcd (PID $ETCD_PID) detected — killing and clearing member dir"
+      # Match etcd by its config-file argument, which is stable across versions.
+      # (The process name shown in ps may be just "etcd" without the full path
+      #  since Go programs often show only the binary basename in argv[0].)
+      ETCD_PID=$(pgrep -f "etcd --config-file=/var/lib/rancher/rke2" 2>/dev/null || true)
+      if [ -n "$ETCD_PID" ]; then
+        echo "rke2-etcd-recovery: orphaned etcd (PID $ETCD_PID) detected — killing"
         kill -9 "$ETCD_PID" 2>/dev/null || true
         sleep 2
-        rm -rf "$MEMBER_DIR"
-        echo "rke2-etcd-recovery: cleared — rke2-server will reinitialize etcd"
+        echo "rke2-etcd-recovery: done — rke2-server will restart etcd cleanly"
       fi
 
   - path: /etc/systemd/system/rke2-server.service.d/10-etcd-recovery.conf
