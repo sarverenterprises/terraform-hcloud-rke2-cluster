@@ -239,8 +239,8 @@ resource "terraform_data" "kubeconfig_store" {
 
   input = sensitive(
     null_resource.fetch_kubeconfig.id != ""
-      ? (fileexists(local.kubeconfig_path) ? file(local.kubeconfig_path) : "")
-      : ""
+    ? (fileexists(local.kubeconfig_path) ? file(local.kubeconfig_path) : "")
+    : ""
   )
 }
 
