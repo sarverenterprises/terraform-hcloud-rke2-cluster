@@ -56,7 +56,13 @@ resource "helm_release" "hcloud_ccm" {
 
   # Cilium must finish before CCM can deploy: CCM pods require cluster
   # networking to become Ready, and networking is provided by Cilium.
-  # wait_for_coredns ensures CoreDNS is up before CCM starts — CCM resolves
-  # Hetzner API endpoints by hostname and needs DNS available at startup.
-  depends_on = [kubernetes_secret_v1.hcloud_ccm[0], null_resource.wait_for_coredns]
+  #
+  # IMPORTANT: CCM must NOT depend on wait_for_coredns. When hcloud CCM is
+  # configured, the kubelet registers every new node with the taint
+  # node.cloudprovider.kubernetes.io/uninitialized:NoSchedule. CCM removes
+  # that taint once it initialises each node. The RKE2 helm-install-rke2-coredns
+  # Job pod does NOT tolerate that taint, so CoreDNS can never schedule until
+  # CCM runs. Making CCM depend on CoreDNS readiness creates an unresolvable
+  # deadlock. CCM and wait_for_coredns must run in parallel after Cilium.
+  depends_on = [kubernetes_secret_v1.hcloud_ccm[0], helm_release.cilium]
 }
