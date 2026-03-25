@@ -171,8 +171,86 @@ resource "null_resource" "wait_for_cluster" {
   }
 }
 
-resource "null_resource" "fetch_kubeconfig" {
+# =============================================================================
+# CP Joiner — Terraform-gated sequential join (CP-1 then CP-2)
+#
+# Cloud-init only *enables* rke2-server on CP-1/CP-2 (no start). This
+# provisioner SSHes in after CP-0's API is confirmed healthy, wipes any
+# partial TLS/DB state from a prior failed join, and starts rke2-server.
+# Sequential join (CP-1 → CP-2) prevents simultaneous etcd learner races.
+#
+# Liveness guard: if rke2-server is already active on a node, the wipe is
+# skipped and the provisioner exits 0 — making re-runs (e.g. after a timed-out
+# apply or `terraform state rm`) safe on a live cluster member.
+# =============================================================================
+
+resource "terraform_data" "join_cps" {
   depends_on = [null_resource.wait_for_cluster]
+
+  # Retrigger when either CP-1 or CP-2 server is replaced.
+  # Use server IDs (not IPs) — IDs are globally unique integers that are never
+  # reused; IPs can be recycled by Hetzner, creating false-stable triggers.
+  triggers_replace = {
+    cp_ids = join(",", [
+      module.control_plane.server_ids[1],
+      module.control_plane.server_ids[2],
+    ])
+  }
+
+  provisioner "local-exec" {
+    # interpreter = ["/bin/bash", "-c"] is required — default /bin/sh (dash) does not support
+    # process substitution <(...) used for SSH key injection.
+    interpreter = ["/bin/bash", "-c"]
+    environment = {
+      SSHKEY = var.ssh_private_key
+      CP0_IP = module.control_plane.public_ips[0]
+      CP1_IP = module.control_plane.public_ips[1]
+      CP2_IP = module.control_plane.public_ips[2]
+      # Path to the node-side join script (avoids nested heredoc conflicts in HCL).
+      # The script is piped to the remote bash via stdin (bash -s -- LABEL < SCRIPT).
+      JOIN_SCRIPT = "${path.module}/scripts/join-cp-node.sh"
+    }
+    command = <<-EOT
+      set -euo pipefail
+
+      join_node() {
+        local TARGET_IP="$1"
+        local LABEL="$2"
+
+        # Wait for CP-0's RKE2 supervisor port 9345 (join-readiness endpoint, not just TCP open).
+        # More reliable than nc -z — confirms the HTTP server is fully initialized.
+        echo "[$LABEL] Waiting for CP-0 supervisor at $CP0_IP:9345 ..." >&2
+        for i in $(seq 1 24); do
+          if curl -sk --max-time 5 "https://$CP0_IP:9345/ping" >/dev/null 2>&1; then
+            echo "[$LABEL] CP-0 supervisor ready (attempt $i)." >&2
+            break
+          fi
+          if [ "$i" -eq 24 ]; then
+            echo "[$LABEL] ERROR: CP-0 supervisor at $CP0_IP:9345 did not respond within 120s." >&2
+            exit 1
+          fi
+          sleep 5
+        done
+
+        echo "[$LABEL] Connecting to $TARGET_IP ..." >&2
+        ssh \
+          -o StrictHostKeyChecking=no \
+          -o UserKnownHostsFile=/dev/null \
+          -o LogLevel=ERROR \
+          -o ConnectTimeout=10 \
+          -i <(printf '%s' "$SSHKEY") \
+          "root@$TARGET_IP" \
+          bash -s -- "$LABEL" < "$JOIN_SCRIPT"
+      }
+
+      join_node "$CP1_IP" "CP-1"
+      join_node "$CP2_IP" "CP-2"
+    EOT
+  }
+}
+
+resource "null_resource" "fetch_kubeconfig" {
+  depends_on = [null_resource.wait_for_cluster, terraform_data.join_cps]
 
   triggers = {
     cp_ids = join(",", module.control_plane.server_ids)
