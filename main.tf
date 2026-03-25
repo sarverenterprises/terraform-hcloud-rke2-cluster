@@ -203,7 +203,6 @@ resource "terraform_data" "join_cps" {
     interpreter = ["/bin/bash", "-c"]
     environment = {
       SSHKEY = var.ssh_private_key
-      CP0_IP = module.control_plane.public_ips[0]
       CP1_IP = module.control_plane.public_ips[1]
       CP2_IP = module.control_plane.public_ips[2]
       # Path to the node-side join script (avoids nested heredoc conflicts in HCL).
@@ -213,24 +212,13 @@ resource "terraform_data" "join_cps" {
     command = <<-EOT
       set -euo pipefail
 
+      # CP-0 readiness is guaranteed by depends_on = [null_resource.wait_for_cluster],
+      # which polls https://LB_IP:6443/healthz until healthy. Port 9345 is firewall-
+      # restricted to the cluster subnet and is not reachable from the operator's machine.
+
       join_node() {
         local TARGET_IP="$1"
         local LABEL="$2"
-
-        # Wait for CP-0's RKE2 supervisor port 9345 (join-readiness endpoint, not just TCP open).
-        # More reliable than nc -z — confirms the HTTP server is fully initialized.
-        echo "[$LABEL] Waiting for CP-0 supervisor at $CP0_IP:9345 ..." >&2
-        for i in $(seq 1 24); do
-          if curl -sk --max-time 5 "https://$CP0_IP:9345/ping" >/dev/null 2>&1; then
-            echo "[$LABEL] CP-0 supervisor ready (attempt $i)." >&2
-            break
-          fi
-          if [ "$i" -eq 24 ]; then
-            echo "[$LABEL] ERROR: CP-0 supervisor at $CP0_IP:9345 did not respond within 120s." >&2
-            exit 1
-          fi
-          sleep 5
-        done
 
         echo "[$LABEL] Connecting to $TARGET_IP ..." >&2
         ssh \
