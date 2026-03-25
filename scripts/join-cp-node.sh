@@ -10,6 +10,10 @@
 # Safety: if rke2-server is already active (e.g. provisioner re-run after a
 # successful join), the wipe is skipped and the script exits 0 immediately.
 # This makes the script idempotent against Terraform state rm + re-apply.
+#
+# Retry safety: if rke2-server is activating (a prior run was interrupted mid-join),
+# the service is stopped cleanly before wiping — preventing the partial-state wipe
+# from corrupting an in-progress etcd join.
 
 set -euo pipefail
 
@@ -39,7 +43,20 @@ if systemctl is-active rke2-server --quiet 2>/dev/null; then
 fi
 
 # ---------------------------------------------------------------------------
-# 3. Wipe partial TLS/DB state left by any prior failed join attempt.
+# 3. Stop service if it is in any non-stopped state (activating, failed, etc.)
+#    before wiping. Without this, wiping while the service is activating
+#    corrupts an in-progress etcd join and causes systemctl start to fail.
+# ---------------------------------------------------------------------------
+SVC_STATE=$(systemctl show rke2-server --property=ActiveState --value 2>/dev/null || true)
+if [ "$SVC_STATE" != "inactive" ] && [ -n "$SVC_STATE" ]; then
+  echo "[$LABEL] Stopping rke2-server (state=$SVC_STATE) before wipe ..." >&2
+  systemctl stop rke2-server 2>/dev/null || true
+  # Give it a moment to fully stop and release file locks.
+  sleep 2
+fi
+
+# ---------------------------------------------------------------------------
+# 4. Wipe partial TLS/DB state left by any prior failed join attempt.
 #    These directories cause RKE2 to bypass server: config and run as a
 #    standalone primary instead of joining the existing cluster.
 # ---------------------------------------------------------------------------
@@ -47,13 +64,13 @@ echo "[$LABEL] Wiping partial server state (tls/, db/) ..." >&2
 rm -rf /var/lib/rancher/rke2/server/tls /var/lib/rancher/rke2/server/db
 
 # ---------------------------------------------------------------------------
-# 4. Start the join.
+# 5. Start the join.
 # ---------------------------------------------------------------------------
 echo "[$LABEL] Starting rke2-server ..." >&2
 systemctl start rke2-server
 
 # ---------------------------------------------------------------------------
-# 5. Poll for active status (300s ceiling, ~5s intervals = 60 attempts).
+# 6. Poll for active status (300s ceiling, ~5s intervals = 60 attempts).
 #    Short-circuit on crash-loop to avoid waiting the full 300s.
 # ---------------------------------------------------------------------------
 echo "[$LABEL] Waiting for rke2-server to become active ..." >&2
