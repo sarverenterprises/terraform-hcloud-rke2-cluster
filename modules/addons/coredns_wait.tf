@@ -59,13 +59,33 @@ resource "null_resource" "wait_for_coredns" {
         # force-delete it so the Job controller spawns a fresh replacement.
         if [ "$ELAPSED" -ge 120 ]; then
           STUCK=$(kubectl --kubeconfig "$KUBECONFIG_PATH" \
-            get pods -n kube-system --no-headers 2>/dev/null \
+            get pods -n kube-system --no-headers --request-timeout=15s 2>/dev/null \
             | awk '/helm-install-rke2-coredns/ && !/Succeeded/ && !/Running/ {print $1}')
           if [ -n "$STUCK" ]; then
             echo "  Stuck CoreDNS installer pod(s) detected — force-deleting: $STUCK"
+            # R2: Cordon NotReady/Unknown CP nodes (single query, not per-pod lookup)
+            NOTREADY_CPS=$(kubectl --kubeconfig "$KUBECONFIG_PATH" \
+              get nodes -l node-role.kubernetes.io/control-plane=true \
+              --no-headers --request-timeout=15s 2>/dev/null \
+              | awk '$2 == "False" || $2 == "Unknown" {print $1}' || true)
+            if [ -n "$NOTREADY_CPS" ]; then
+              echo "$NOTREADY_CPS" | while IFS= read -r NODE; do
+                [ -n "$NODE" ] || continue
+                echo "  Cordoning NotReady/Unknown CP node: $NODE"
+                kubectl --kubeconfig "$KUBECONFIG_PATH" cordon "$NODE" \
+                  --request-timeout=15s 2>/dev/null || true
+              done
+            fi
             echo "$STUCK" | xargs -I{} kubectl --kubeconfig "$KUBECONFIG_PATH" \
               delete pod {} -n kube-system --force --grace-period=0 2>/dev/null || true
           fi
+        fi
+
+        # R3: Reset Job backoff at 300s by deleting and letting HelmChart controller recreate
+        if [ "$ELAPSED" -eq 300 ]; then
+          echo "  $${ELAPSED}s elapsed: deleting CoreDNS installer Job to reset backoff counter"
+          kubectl --kubeconfig "$KUBECONFIG_PATH" delete job helm-install-rke2-coredns \
+            -n kube-system --ignore-not-found=true --request-timeout=15s 2>/dev/null || true
         fi
 
         echo "  $${ELAPSED}s elapsed: CoreDNS not ready yet, retrying in $${POLL_INTERVAL}s..."

@@ -23,11 +23,19 @@ write_files:
       # Match etcd by its config-file argument, which is stable across versions.
       # (The process name shown in ps may be just "etcd" without the full path
       #  since Go programs often show only the binary basename in argv[0].)
+      MEMBER_DIR="/var/lib/rancher/rke2/server/db/etcd/member"
       ETCD_PID=$(pgrep -f "etcd --config-file=/var/lib/rancher/rke2" 2>/dev/null || true)
       if [ -n "$ETCD_PID" ]; then
         echo "rke2-etcd-recovery: orphaned etcd (PID $ETCD_PID) detected — killing"
         kill -9 "$ETCD_PID" 2>/dev/null || true
         sleep 2
+        if [ -d "$MEMBER_DIR" ]; then
+          rm -rf "$MEMBER_DIR" \
+            && echo "rke2-etcd-recovery: member dir cleared — etcd will reinitialize as single-node" \
+            || echo "rke2-etcd-recovery: WARNING — could not remove member dir"
+        else
+          echo "rke2-etcd-recovery: member dir absent — nothing to clear"
+        fi
         echo "rke2-etcd-recovery: done — rke2-server will restart etcd cleanly"
       fi
 
@@ -111,14 +119,6 @@ runcmd:
       echo "WARNING: no private network IP detected; etcd will use public IP"
     fi
 
-  # Wait for cp-0's supervisor (port 9345) before proceeding.
-  # This prevents the follower from racing ahead of cp-0's etcd initialization,
-  # which would cause repeated failed join attempts and corrupt WAL state.
-  - |
-    echo "Waiting for cp-0 supervisor at ${first_cp_ip}:9345 ..."
-    timeout 600 bash -c \
-      'until nc -z -w3 ${first_cp_ip} 9345 2>/dev/null; do sleep 10; done'
-    echo "cp-0 supervisor is ready — proceeding with RKE2 install"
 %{ endif ~}
 
   # Install RKE2 server
@@ -132,11 +132,19 @@ runcmd:
   # Reload systemd so the etcd-recovery drop-in is picked up before starting.
   - systemctl daemon-reload
 
-  # Enable and start RKE2 server service
+  # Enable RKE2 server service (always — needed for next-boot start on all CP nodes).
+  # CP joiners (CP-1/CP-2) are started by a Terraform provisioner after CP-0 is confirmed
+  # healthy, not here — this prevents the split-brain race where a joiner starts rke2-server
+  # before CP-0's etcd is ready to accept new members.
   - systemctl enable rke2-server.service
+%{ if cluster_init ~}
   - systemctl start rke2-server.service
+%{ endif ~}
 
-  # Wait for RKE2 server to be running and kubeconfig to be available
+%{ if cluster_init ~}
+  # Wait for RKE2 server to be running and kubeconfig to be available.
+  # Only needed on CP-0 (cluster-init node) — joiners are started by a Terraform
+  # provisioner after CP-0 is healthy, so no cloud-init wait is required for them.
   - |
     timeout 300 bash -c '
       while ! systemctl is-active rke2-server --quiet 2>/dev/null; do
@@ -148,6 +156,7 @@ runcmd:
         sleep 5
       done
     '
+%{ endif ~}
 
   # Add RKE2 binaries to PATH for interactive sessions
   - |
