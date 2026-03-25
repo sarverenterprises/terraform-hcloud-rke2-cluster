@@ -89,7 +89,6 @@ runcmd:
       --auth-key="${tailscale_auth_key}" \
       --hostname="${hostname}" \
       --ephemeral \
-      --accept-routes \
       2>&1 | tee -a /var/log/tailscale-setup.log || true
 %{ endif ~}
 

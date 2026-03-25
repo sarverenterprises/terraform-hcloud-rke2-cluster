@@ -166,13 +166,15 @@ runcmd:
 
 %{ if enable_tailscale && !cluster_init ~}
   # Install Tailscale on follower CP nodes AFTER RKE2 starts.
-  # Joiners do not advertise routes — only cp-0 does.
+  # Joiners do NOT accept-routes — they are already on the Hetzner private network and
+  # accepting the cluster subnet route (advertised by cp-0) would cause etcd peer traffic
+  # to be routed via Tailscale with source 100.x.x.x, which is not in the peer TLS cert
+  # SANs, causing CP-0's etcd to reject the connection with EOF.
   - |
     curl -fsSL https://tailscale.com/install.sh | sh
     tailscale up \
       --auth-key="${tailscale_auth_key}" \
       --hostname="${hostname}" \
-      --accept-routes \
       2>&1 | tee -a /var/log/tailscale-setup.log || true
 %{ endif ~}
 
