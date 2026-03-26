@@ -51,6 +51,14 @@ resource "helm_release" "hcloud_ccm" {
         # Must match cluster-cidr in RKE2 server config and Cilium IPAM pool
         clusterCIDR = var.pod_cidr
       }
+      env = {
+        # Without a default location, CCM refuses to create LoadBalancer Services
+        # unless every Service carries load-balancer.hetzner.cloud/location or
+        # load-balancer.hetzner.cloud/network-zone annotations.
+        HCLOUD_LOAD_BALANCERS_DEFAULT_LOCATION = {
+          value = var.location
+        }
+      }
     })
   ]
 

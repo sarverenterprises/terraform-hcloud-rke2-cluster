@@ -7,6 +7,12 @@ variable "cluster_name" {
   type        = string
 }
 
+variable "location" {
+  description = "Default Hetzner location for cloud resources (e.g. ash, nbg1, hel1). Used as the default load balancer location for CCM-provisioned LBs."
+  type        = string
+  default     = "ash"
+}
+
 variable "kubeconfig_path" {
   description = <<-EOT
     Absolute path to the kubeconfig file on disk.

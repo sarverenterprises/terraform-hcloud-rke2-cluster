@@ -321,6 +321,7 @@ module "addons" {
 
   cluster_name    = var.cluster_name
   kubeconfig_path = local.kubeconfig_path
+  location        = local.control_plane_location
 
   # Hetzner tokens (per-component for least-privilege)
   hcloud_ccm_token        = local.effective_ccm_token
