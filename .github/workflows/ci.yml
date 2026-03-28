@@ -1,0 +1,54 @@
+name: CI
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  lint:
+    name: Lint & Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.11.0"
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+      - name: Validate Root Module
+        run: |
+          terraform init -backend=false
+          terraform validate
+      - name: Validate networking submodule
+        working-directory: modules/networking
+        run: |
+          terraform init -backend=false
+          terraform validate
+      - name: Validate node-pool submodule
+        working-directory: modules/node-pool
+        run: |
+          terraform init -backend=false
+          terraform validate
+      - name: Validate addons submodule
+        working-directory: modules/addons
+        run: |
+          terraform init -backend=false
+          terraform validate
+      - uses: terraform-linters/setup-tflint@v4
+      - name: TFLint
+        run: |
+          tflint --init
+          tflint
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy IaC Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          exit-code: 1

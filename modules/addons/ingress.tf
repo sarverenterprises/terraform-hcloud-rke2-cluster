@@ -89,7 +89,7 @@ resource "null_resource" "gateway_api_crds" {
   }
 
   provisioner "local-exec" {
-    command = "kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml"
+    command = "kubectl --kubeconfig '${var.kubeconfig_path}' apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml"
   }
 
   depends_on = [helm_release.traefik]

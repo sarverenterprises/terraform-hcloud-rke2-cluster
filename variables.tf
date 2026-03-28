@@ -218,10 +218,11 @@ variable "trusted_ssh_cidrs" {
 variable "kube_api_allowed_cidrs" {
   description = <<-EOT
     CIDRs allowed to reach the Kubernetes API server (port 6443) on the load balancer.
-    Default open — restrict to office/VPN/Tailscale CIDRs in production.
+    Default closed — explicitly set to ["0.0.0.0/0", "::/0"] for public access,
+    or restrict to office/VPN/Tailscale CIDRs in production.
   EOT
   type        = list(string)
-  default     = ["0.0.0.0/0", "::/0"]
+  default     = []
 }
 
 variable "nodeport_allowed_cidrs" {
@@ -424,6 +425,66 @@ variable "tailscale_node_auth_key" {
 }
 
 # =============================================================================
+# etcd Backup
+# =============================================================================
+
+variable "enable_etcd_backup" {
+  description = "Enable automated etcd snapshots to S3-compatible storage via RKE2 native config."
+  type        = bool
+  default     = false
+}
+
+variable "etcd_s3_endpoint" {
+  description = "S3-compatible endpoint for etcd backups (e.g. 's3.us-east-1.amazonaws.com')."
+  type        = string
+  default     = null
+}
+
+variable "etcd_s3_bucket" {
+  description = "S3 bucket name for etcd snapshots."
+  type        = string
+  default     = null
+}
+
+variable "etcd_s3_access_key" {
+  description = "S3 access key for etcd backup uploads."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "etcd_s3_secret_key" {
+  description = "S3 secret key for etcd backup uploads."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "etcd_s3_region" {
+  description = "S3 region for etcd backups."
+  type        = string
+  default     = null
+}
+
+variable "etcd_s3_folder" {
+  description = "S3 folder (prefix) for etcd snapshots. Defaults to cluster_name at usage site."
+  type        = string
+  default     = null
+}
+
+variable "etcd_snapshot_schedule_cron" {
+  description = "Cron schedule for etcd snapshots."
+  type        = string
+  default     = "0 */6 * * *"
+}
+
+variable "etcd_snapshot_retention" {
+  description = "Number of etcd snapshots to retain."
+  type        = number
+  default     = 48
+}
+
+# =============================================================================
 # Monitoring
 # =============================================================================
 
@@ -439,6 +500,12 @@ variable "grafana_hostname" {
 
 variable "enable_argocd" {
   description = "Deploy Argo CD and Argo Rollouts."
+  type        = bool
+  default     = false
+}
+
+variable "enable_system_upgrade_controller" {
+  description = "Deploy Rancher System Upgrade Controller for automated node upgrades via Plan CRDs."
   type        = bool
   default     = false
 }
@@ -543,6 +610,12 @@ variable "cluster_autoscaler_image_tag" {
   default     = "v1.32.7"
 }
 
+variable "kube_prometheus_stack_chart_version" {
+  description = "kube-prometheus-stack Helm chart version."
+  type        = string
+  default     = "~> 67.0"
+}
+
 variable "argocd_chart_version" {
   description = "Argo CD Helm chart version."
   type        = string
@@ -553,4 +626,10 @@ variable "argo_rollouts_chart_version" {
   description = "Argo Rollouts Helm chart version."
   type        = string
   default     = "~> 2.40"
+}
+
+variable "system_upgrade_controller_chart_version" {
+  description = "System Upgrade Controller Helm chart version. Must be an exact version — Helm provider v3 does not support constraint expressions."
+  type        = string
+  default     = "0.14.2"
 }

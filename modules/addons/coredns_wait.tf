@@ -50,6 +50,19 @@ resource "null_resource" "wait_for_coredns" {
           wait pods -n kube-system -l k8s-app=kube-dns \
           --for=condition=Ready --timeout=5s 2>/dev/null; then
           echo "CoreDNS is ready ($${ELAPSED}s elapsed)"
+          # Uncordon any CP nodes that were cordoned by this script during recovery
+          CORDONED_CPS=$(kubectl --kubeconfig "$KUBECONFIG_PATH" \
+            get nodes -l node-role.kubernetes.io/control-plane=true \
+            --no-headers --request-timeout=15s 2>/dev/null \
+            | awk '/SchedulingDisabled/ {print $1}' || true)
+          if [ -n "$CORDONED_CPS" ]; then
+            echo "$CORDONED_CPS" | while IFS= read -r NODE; do
+              [ -n "$NODE" ] || continue
+              echo "  Uncordoning CP node: $NODE"
+              kubectl --kubeconfig "$KUBECONFIG_PATH" uncordon "$NODE" \
+                --request-timeout=15s 2>/dev/null || true
+            done
+          fi
           exit 0
         fi
 

@@ -256,6 +256,12 @@ variable "enable_tailscale_operator" {
   default     = false
 }
 
+variable "enable_system_upgrade_controller" {
+  description = "Deploy Rancher System Upgrade Controller."
+  type        = bool
+  default     = false
+}
+
 # =============================================================================
 # Cloudflare
 # =============================================================================
@@ -434,4 +440,16 @@ variable "argo_rollouts_chart_version" {
   description = "Argo Rollouts Helm chart version."
   type        = string
   default     = "~> 2.40"
+}
+
+variable "kube_prometheus_stack_chart_version" {
+  description = "kube-prometheus-stack Helm chart version."
+  type        = string
+  default     = "~> 67.0"
+}
+
+variable "system_upgrade_controller_chart_version" {
+  description = "System Upgrade Controller Helm chart version. Must be an exact version — Helm provider v3 does not support constraint expressions."
+  type        = string
+  default     = "0.14.2"
 }

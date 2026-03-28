@@ -59,8 +59,8 @@ resource "kubernetes_secret_v1" "flux_system" {
   data = {
     "identity"     = tls_private_key.flux[0].private_key_pem
     "identity.pub" = tls_private_key.flux[0].public_key_openssh
-    # Operator registers host fingerprint after bootstrap.
-    "known_hosts" = ""
+    # GitHub SSH host keys (from https://api.github.com/meta)
+    "known_hosts" = "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl\ngithub.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=\ngithub.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk="
   }
 
   depends_on = [kubernetes_namespace_v1.flux_system]
@@ -122,12 +122,26 @@ resource "null_resource" "flux_github_deploy_key" {
   }
 
   provisioner "local-exec" {
+    environment = {
+      GITHUB_TOKEN = var.github_token
+    }
     command = <<-EOT
+      # Check if key already exists (idempotency guard for re-applies)
+      EXISTING=$(curl -fsSL \
+        --connect-timeout 10 --max-time 30 \
+        -H "Authorization: token $GITHUB_TOKEN" \
+        "https://api.github.com/repos/${var.flux_github_org}/${var.flux_github_repo}/keys" \
+        | grep -c "${trimspace(tls_private_key.flux[0].public_key_openssh)}" 2>/dev/null || true)
+      if [ "$EXISTING" -gt 0 ]; then
+        echo "Deploy key already registered — skipping"
+        exit 0
+      fi
       curl -fsSL \
+        --connect-timeout 10 --max-time 30 \
         -X POST \
-        -H "Authorization: token ${var.github_token}" \
+        -H "Authorization: token $GITHUB_TOKEN" \
         -H "Content-Type: application/json" \
-        https://api.github.com/repos/${var.flux_github_org}/${var.flux_github_repo}/keys \
+        "https://api.github.com/repos/${var.flux_github_org}/${var.flux_github_repo}/keys" \
         -d '{"title":"flux-${var.cluster_name}","key":"${trimspace(tls_private_key.flux[0].public_key_openssh)}","read_only":true}'
     EOT
   }

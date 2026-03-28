@@ -61,6 +61,12 @@ output "flux_public_key" {
   value       = module.addons.flux_public_key
 }
 
+output "grafana_admin_password" {
+  description = "Auto-generated Grafana admin password. Retrieve with: terraform output -raw grafana_admin_password"
+  value       = module.addons.grafana_admin_password
+  sensitive   = true
+}
+
 output "argocd_admin_password_hint" {
   description = "kubectl command to retrieve the Argo CD initial admin password. Only set when enable_argocd=true."
   value       = module.addons.argocd_admin_password_hint

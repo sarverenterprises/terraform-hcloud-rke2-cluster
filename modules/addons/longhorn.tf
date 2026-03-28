@@ -75,10 +75,10 @@ resource "kubernetes_manifest" "longhorn_sc_rwo" {
     provisioner          = "driver.longhorn.io"
     allowVolumeExpansion = true
     reclaimPolicy        = "Delete"
-    volumeBindingMode    = "Immediate"
+    volumeBindingMode    = "WaitForFirstConsumer"
     parameters = {
       numberOfReplicas = tostring(var.longhorn_default_replicas)
-      dataLocality     = "disabled"
+      dataLocality     = "best-effort"
       fsType           = "ext4"
     }
   }
@@ -105,7 +105,7 @@ resource "kubernetes_manifest" "longhorn_sc_rwx" {
     provisioner          = "driver.longhorn.io"
     allowVolumeExpansion = true
     reclaimPolicy        = "Delete"
-    volumeBindingMode    = "Immediate"
+    volumeBindingMode    = "WaitForFirstConsumer"
     parameters = {
       numberOfReplicas = tostring(var.longhorn_default_replicas)
       dataLocality     = "disabled"

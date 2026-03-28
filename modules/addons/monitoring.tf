@@ -49,6 +49,12 @@ locals {
 # ---------------------------------------------------------------------------
 # Helm release: kube-prometheus-stack
 # ---------------------------------------------------------------------------
+resource "random_password" "grafana_admin" {
+  count   = var.enable_monitoring ? 1 : 0
+  length  = 24
+  special = true
+}
+
 resource "helm_release" "kube_prometheus_stack" {
   count = var.enable_monitoring ? 1 : 0
 
@@ -56,19 +62,24 @@ resource "helm_release" "kube_prometheus_stack" {
   repository = "https://prometheus-community.github.io/helm-charts"
   chart      = "kube-prometheus-stack"
   namespace  = kubernetes_namespace_v1.monitoring[0].metadata[0].name
-  version    = "~> 67.0"
+  version    = var.kube_prometheus_stack_chart_version
 
   wait    = true
   atomic  = true
   timeout = 600
 
+  lifecycle {
+    precondition {
+      condition     = !(var.enable_monitoring && !var.enable_longhorn)
+      error_message = "enable_monitoring requires enable_longhorn = true (Prometheus/Alertmanager use longhorn-rwo StorageClass)."
+    }
+  }
+
   values = [
     yamlencode({
       grafana = {
-        enabled = true
-        # Default password — operator MUST override this via a sealed secret
-        # or by passing a custom values override before exposing Grafana publicly.
-        adminPassword = "changeme"
+        enabled       = true
+        adminPassword = random_password.grafana_admin[0].result
         ingress       = local.grafana_ingress
       }
 
@@ -109,5 +120,9 @@ resource "helm_release" "kube_prometheus_stack" {
     })
   ]
 
-  depends_on = [kubernetes_namespace_v1.monitoring]
+  depends_on = [
+    kubernetes_namespace_v1.monitoring,
+    helm_release.longhorn,
+    kubernetes_manifest.longhorn_sc_rwo,
+  ]
 }

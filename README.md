@@ -268,6 +268,41 @@ Worker nodes are bootstrapped with the first control plane node's private IP as 
 
 ---
 
+## Golden Snapshots (Optional)
+
+By default, every node downloads and installs RKE2 from the internet at first boot (with retry logic). For faster boot times and reduced internet dependency, you can pre-bake a Hetzner Cloud snapshot with RKE2 already installed.
+
+### Building a Snapshot
+
+1. Create a Hetzner server with the target OS image (e.g. `ubuntu-24.04`).
+2. Install RKE2 (do **not** start the service):
+   ```bash
+   curl -sfL https://get.rke2.io | INSTALL_RKE2_VERSION=v1.32.13+rke2r1 sh -
+   ```
+3. Clean up cloud-init state and shut down the server.
+4. Create a snapshot via the Hetzner Cloud Console, API, or `hcloud server create-image`.
+
+> **Tip:** [Packer](https://www.packer.io/) with the `hcloud` builder can automate steps 1-4 into a repeatable pipeline.
+
+### Using the Snapshot
+
+Set `os_image` to the numeric snapshot ID instead of an OS name:
+
+```hcl
+os_image = "12345678"
+```
+
+### Trade-offs
+
+| | Internet install (default) | Golden snapshot |
+|---|---|---|
+| Boot time | Slower (~30-90 s for download + install) | Faster (RKE2 already on disk) |
+| Internet dependency | Required at first boot | Not required |
+| RKE2 upgrades | Change `rke2_version` variable | Rebuild snapshot, then update `os_image` |
+| Maintenance | None | Snapshot rebuild per RKE2 version |
+
+---
+
 ## Add-on Usage
 
 ### Argo CD + Argo Rollouts
