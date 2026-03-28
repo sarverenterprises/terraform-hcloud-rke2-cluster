@@ -72,6 +72,17 @@ module "control_plane" {
   enable_tailscale_nodes = var.enable_tailscale_nodes
   tailscale_auth_key     = var.tailscale_node_auth_key
 
+  # etcd Backup
+  enable_etcd_backup          = var.enable_etcd_backup
+  etcd_s3_endpoint            = var.etcd_s3_endpoint
+  etcd_s3_bucket              = var.etcd_s3_bucket
+  etcd_s3_access_key          = var.etcd_s3_access_key
+  etcd_s3_secret_key          = var.etcd_s3_secret_key
+  etcd_s3_region              = var.etcd_s3_region
+  etcd_s3_folder              = coalesce(var.etcd_s3_folder, var.cluster_name)
+  etcd_snapshot_schedule_cron = var.etcd_snapshot_schedule_cron
+  etcd_snapshot_retention     = var.etcd_snapshot_retention
+
   # CP nodes never get dedicated Longhorn volumes
   longhorn_volume_size = 0
   scaling_mode         = "fixed"
@@ -133,16 +144,16 @@ module "worker_pools" {
 # .kube/<cluster_name>.yaml in the caller's working directory.
 #
 # Two-phase apply: On initial provisioning, run:
-#   1. terraform apply -target=module.control_plane -target=module.worker_pools \
-#              -target=null_resource.wait_for_cluster
-#   2. terraform apply
+#   Phase 1: terraform apply -target=module.cluster.terraform_data.kubeconfig_store
+#   Phase 2: terraform apply
 # =============================================================================
 
 resource "null_resource" "wait_for_cluster" {
   depends_on = [module.control_plane]
 
   triggers = {
-    lb_ip = module.networking.control_plane_lb_ip
+    lb_ip          = module.networking.control_plane_lb_ip
+    lb_service_ids = join(",", module.networking.lb_service_ids)
   }
 
   provisioner "local-exec" {
@@ -252,6 +263,9 @@ resource "null_resource" "fetch_kubeconfig" {
         -o StrictHostKeyChecking=no \
         -o UserKnownHostsFile=/dev/null \
         -o LogLevel=ERROR \
+        -o ConnectTimeout=30 \
+        -o ServerAliveInterval=15 \
+        -o ServerAliveCountMax=4 \
         -i <(printf '%s' "$SSHKEY") \
         root@${module.control_plane.first_node_public_ip} \
         "cat /etc/rancher/rke2/rke2.yaml" \
@@ -273,41 +287,30 @@ resource "null_resource" "fetch_kubeconfig" {
 # Stores the kubeconfig in Terraform state so that CI runners with no
 # persistent filesystem between phases can access it in Phase 2.
 #
-# Why the ternary on null_resource.fetch_kubeconfig.id:
-#   file() is a pure function evaluated at both plan time AND apply time. When
-#   fetch_kubeconfig overwrites the kubeconfig file during an apply (e.g. on
-#   cluster recreate), the plan-time value and apply-time value diverge,
-#   causing Terraform to emit "function returned an inconsistent result".
+# How it works:
+#   data.local_sensitive_file reads the kubeconfig from disk AFTER
+#   fetch_kubeconfig creates it. The depends_on defers the read to apply
+#   time — during plan, the data source shows content = (known after apply),
+#   avoiding the plan/apply inconsistency that file()/fileexists() cause
+#   when the file is created during the same apply.
 #
-#   null_resource.fetch_kubeconfig.id is "(known after apply)" whenever
-#   fetch_kubeconfig is being created or replaced. A ternary whose condition
-#   is unknown evaluates to unknown — Terraform never calls file() at plan
-#   time in that case, so there is no plan/apply value to compare and no
-#   inconsistency error.
+#   Do NOT add a count = fileexists() guard — it conflicts with depends_on
+#   deferral: count is evaluated at plan time before deferral applies,
+#   producing count=0 on cold-state plans and reintroducing the two-apply
+#   problem.
 #
-#   When fetch_kubeconfig is stable (no changes), its id is a known UUID so
-#   the ternary evaluates normally. The kubeconfig file is also stable at that
-#   point (fetch_kubeconfig did not re-run), so plan and apply values match.
-#
-#   fileexists() guards against destroy scenarios where local_sensitive_file
-#   has already removed the kubeconfig from disk before this resource is torn
-#   down; in that case input gracefully falls back to "".
+#   Destroy note: if the kubeconfig file is manually deleted before running
+#   terraform destroy, use -refresh=false to skip the data source refresh.
+#   In normal destroy flows the file exists on disk throughout.
 # =============================================================================
 
-resource "terraform_data" "kubeconfig_store" {
+data "local_sensitive_file" "kubeconfig" {
+  filename   = local.kubeconfig_path
   depends_on = [null_resource.fetch_kubeconfig]
+}
 
-  # Re-run whenever the cluster changes (new servers or LB IP).
-  triggers_replace = [
-    join(",", module.control_plane.server_ids),
-    module.networking.control_plane_lb_ip,
-  ]
-
-  input = sensitive(
-    null_resource.fetch_kubeconfig.id != ""
-    ? (fileexists(local.kubeconfig_path) ? file(local.kubeconfig_path) : "")
-    : ""
-  )
+resource "terraform_data" "kubeconfig_store" {
+  input = data.local_sensitive_file.kubeconfig.content
 }
 
 # =============================================================================
@@ -387,19 +390,24 @@ module "addons" {
   argocd_github_client_secret = var.argocd_github_client_secret
   argocd_dex_connectors       = var.argocd_dex_connectors
 
+  # System Upgrade Controller
+  enable_system_upgrade_controller        = var.enable_system_upgrade_controller
+  system_upgrade_controller_chart_version = var.system_upgrade_controller_chart_version
+
   # Chart versions
-  cilium_chart_version             = var.cilium_chart_version
-  hcloud_ccm_chart_version         = var.hcloud_ccm_chart_version
-  hcloud_csi_chart_version         = var.hcloud_csi_chart_version
-  longhorn_chart_version           = var.longhorn_chart_version
-  cert_manager_chart_version       = var.cert_manager_chart_version
-  external_dns_chart_version       = var.external_dns_chart_version
-  traefik_chart_version            = var.traefik_chart_version
-  flux_version                     = var.flux_version
-  cluster_autoscaler_chart_version = var.cluster_autoscaler_chart_version
-  cluster_autoscaler_image_tag     = var.cluster_autoscaler_image_tag
-  argocd_chart_version             = var.argocd_chart_version
-  argo_rollouts_chart_version      = var.argo_rollouts_chart_version
+  cilium_chart_version                = var.cilium_chart_version
+  hcloud_ccm_chart_version            = var.hcloud_ccm_chart_version
+  hcloud_csi_chart_version            = var.hcloud_csi_chart_version
+  longhorn_chart_version              = var.longhorn_chart_version
+  cert_manager_chart_version          = var.cert_manager_chart_version
+  external_dns_chart_version          = var.external_dns_chart_version
+  traefik_chart_version               = var.traefik_chart_version
+  flux_version                        = var.flux_version
+  cluster_autoscaler_chart_version    = var.cluster_autoscaler_chart_version
+  cluster_autoscaler_image_tag        = var.cluster_autoscaler_image_tag
+  argocd_chart_version                = var.argocd_chart_version
+  argo_rollouts_chart_version         = var.argo_rollouts_chart_version
+  kube_prometheus_stack_chart_version = var.kube_prometheus_stack_chart_version
 
   depends_on = [null_resource.fetch_kubeconfig]
 }

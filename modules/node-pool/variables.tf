@@ -173,6 +173,66 @@ variable "tailscale_auth_key" {
 }
 
 # =============================================================================
+# etcd Backup
+# =============================================================================
+
+variable "enable_etcd_backup" {
+  description = "Enable automated etcd snapshots to S3-compatible storage via RKE2 native config."
+  type        = bool
+  default     = false
+}
+
+variable "etcd_s3_endpoint" {
+  description = "S3-compatible endpoint for etcd backups."
+  type        = string
+  default     = null
+}
+
+variable "etcd_s3_bucket" {
+  description = "S3 bucket name for etcd snapshots."
+  type        = string
+  default     = null
+}
+
+variable "etcd_s3_access_key" {
+  description = "S3 access key for etcd backup uploads."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "etcd_s3_secret_key" {
+  description = "S3 secret key for etcd backup uploads."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "etcd_s3_region" {
+  description = "S3 region for etcd backups."
+  type        = string
+  default     = null
+}
+
+variable "etcd_s3_folder" {
+  description = "S3 folder (prefix) for etcd snapshots."
+  type        = string
+  default     = null
+}
+
+variable "etcd_snapshot_schedule_cron" {
+  description = "Cron schedule for etcd snapshots."
+  type        = string
+  default     = "0 */6 * * *"
+}
+
+variable "etcd_snapshot_retention" {
+  description = "Number of etcd snapshots to retain."
+  type        = number
+  default     = 48
+}
+
+# =============================================================================
 # Longhorn data volume
 # =============================================================================
 
@@ -181,3 +241,4 @@ variable "longhorn_volume_size" {
   type        = number
   default     = 0
 }
+

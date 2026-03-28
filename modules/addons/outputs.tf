@@ -15,6 +15,12 @@ output "flux_public_key" {
 # Argo CD
 # ---------------------------------------------------------------------------
 
+output "grafana_admin_password" {
+  description = "Auto-generated Grafana admin password. Only set when enable_monitoring=true."
+  value       = var.enable_monitoring ? random_password.grafana_admin[0].result : null
+  sensitive   = true
+}
+
 output "argocd_admin_password_hint" {
   description = <<-EOT
     Argo CD generates an initial admin password on first install and stores it in

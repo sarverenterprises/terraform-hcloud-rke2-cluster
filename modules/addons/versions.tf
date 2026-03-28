@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.5"
+  required_version = ">= 1.11"
 
   required_providers {
     # Helm and Kubernetes providers are passed through from the root module.
@@ -23,6 +23,11 @@ terraform {
     null = {
       source  = "hashicorp/null"
       version = ">= 3.0.0"
+    }
+    # random is used by monitoring.tf for Grafana admin password generation.
+    random = {
+      source  = "hashicorp/random"
+      version = ">= 3.6.0"
     }
   }
 }

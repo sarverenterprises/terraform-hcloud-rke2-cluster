@@ -57,6 +57,16 @@ resource "hcloud_server" "nodes" {
       pod_cidr             = var.pod_cidr
       service_cidr         = var.service_cidr
       cluster_subnet_cidr  = var.cluster_subnet_cidr
+      # etcd Backup
+      enable_etcd_backup          = var.enable_etcd_backup
+      etcd_snapshot_schedule_cron = var.etcd_snapshot_schedule_cron
+      etcd_snapshot_retention     = var.etcd_snapshot_retention
+      etcd_s3_endpoint            = var.etcd_s3_endpoint != null ? var.etcd_s3_endpoint : ""
+      etcd_s3_bucket              = var.etcd_s3_bucket != null ? var.etcd_s3_bucket : ""
+      etcd_s3_access_key          = var.etcd_s3_access_key != null ? var.etcd_s3_access_key : ""
+      etcd_s3_secret_key          = var.etcd_s3_secret_key != null ? var.etcd_s3_secret_key : ""
+      etcd_s3_region              = var.etcd_s3_region != null ? var.etcd_s3_region : ""
+      etcd_s3_folder              = var.etcd_s3_folder != null ? var.etcd_s3_folder : ""
     })
     : var.role == "server"
     ? templatefile("${path.module}/templates/cp-init.yaml.tpl", {
@@ -77,6 +87,16 @@ resource "hcloud_server" "nodes" {
       pod_cidr             = var.pod_cidr
       service_cidr         = var.service_cidr
       cluster_subnet_cidr  = var.cluster_subnet_cidr
+      # etcd Backup
+      enable_etcd_backup          = var.enable_etcd_backup
+      etcd_snapshot_schedule_cron = var.etcd_snapshot_schedule_cron
+      etcd_snapshot_retention     = var.etcd_snapshot_retention
+      etcd_s3_endpoint            = var.etcd_s3_endpoint != null ? var.etcd_s3_endpoint : ""
+      etcd_s3_bucket              = var.etcd_s3_bucket != null ? var.etcd_s3_bucket : ""
+      etcd_s3_access_key          = var.etcd_s3_access_key != null ? var.etcd_s3_access_key : ""
+      etcd_s3_secret_key          = var.etcd_s3_secret_key != null ? var.etcd_s3_secret_key : ""
+      etcd_s3_region              = var.etcd_s3_region != null ? var.etcd_s3_region : ""
+      etcd_s3_folder              = var.etcd_s3_folder != null ? var.etcd_s3_folder : ""
     })
     : templatefile("${path.module}/templates/worker-init.yaml.tpl", {
       rke2_version         = var.rke2_version
@@ -171,8 +191,9 @@ resource "hcloud_volume" "longhorn_data" {
   labels = { cluster = var.cluster_name, pool = var.pool_name }
 
   lifecycle {
-    # Prevent accidental deletion — data loss if Longhorn is running
-    prevent_destroy = false # Set to true in production for critical clusters
+    # Prevent accidental deletion of Longhorn data volumes.
+    # To destroy: `terraform state rm` the volume resources first, then destroy.
+    prevent_destroy = true
   }
 }
 

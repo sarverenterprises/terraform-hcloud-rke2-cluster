@@ -21,6 +21,12 @@ ${taint_args}
 %{ endif ~}
 
 runcmd:
+  # Block metadata API at host level before any services start (defense-in-depth).
+  # Cilium network policy provides pod-level blocking after CNI deploys, but this
+  # iptables rule covers the bootstrap window when Cilium is not yet running.
+  # Root (uid 0) is exempted so cloud-init and CCM can still function.
+  - iptables -I OUTPUT -d 169.254.169.254 -m owner ! --uid-owner 0 -j DROP
+
   # Detect and set the Hetzner private network IP for node-ip.
   # Uses subnet prefix matching (more reliable than interface names) with a
   # 60s retry loop to handle DHCP assignment lag on first boot.
@@ -37,13 +43,24 @@ runcmd:
       echo "node-ip: \"$PRIVATE_IP\"" >> /etc/rancher/rke2/config.yaml
       echo "Detected private IP: $PRIVATE_IP — written to config.yaml"
     else
-      echo "WARNING: no private network IP detected; node-ip not set"
+      echo "FATAL: no private network IP detected after 60s — aborting to prevent wrong-IP join" >&2
+      exit 1
     fi
 
-  # Install RKE2 agent
+  # Install RKE2 agent (retry up to 5 times for transient network failures)
   - |
     set -e
-    curl -sfL https://get.rke2.io | INSTALL_RKE2_VERSION="${rke2_version}" INSTALL_RKE2_TYPE="agent" sh -
+    for attempt in 1 2 3 4 5; do
+      if curl -sfL https://get.rke2.io | INSTALL_RKE2_VERSION="${rke2_version}" INSTALL_RKE2_TYPE="agent" sh -; then
+        break
+      fi
+      if [ "$attempt" -eq 5 ]; then
+        echo "FATAL: RKE2 agent install failed after 5 attempts" >&2
+        exit 1
+      fi
+      echo "RKE2 install attempt $attempt failed — retrying in $((attempt * 15))s..." >&2
+      sleep $((attempt * 15))
+    done
 
   # Enable and start RKE2 agent service
   - systemctl enable rke2-agent.service
@@ -84,15 +101,27 @@ runcmd:
 %{ if enable_tailscale ~}
   # Install and configure Tailscale for VPN mesh SSH access
   - |
-    curl -fsSL https://tailscale.com/install.sh | sh
+    for attempt in 1 2 3; do
+      curl -fsSL https://tailscale.com/install.sh | sh && break
+      echo "Tailscale install attempt $attempt failed — retrying in $((attempt * 10))s..." >&2
+      sleep $((attempt * 10))
+    done
     tailscale up \
       --auth-key="${tailscale_auth_key}" \
       --hostname="${hostname}" \
       --ephemeral \
-      2>&1 | tee -a /var/log/tailscale-setup.log || true
+      2>&1 | tee -a /var/log/tailscale-setup.log
+    if ! tailscale status >/dev/null 2>&1; then
+      echo "ERROR: Tailscale enrollment failed — node will not be reachable via tailnet" >&2
+    fi
 %{ endif ~}
 
-  # Security: truncate cloud-init logs to remove secrets (rke2_token) from disk
-  - sleep 10
-  - truncate -s 0 /var/log/cloud-init-output.log 2>/dev/null || true
-  - truncate -s 0 /var/log/cloud-init.log 2>/dev/null || true
+  # Security: remove secrets from disk after bootstrap completes.
+  # Covers cloud-init logs, cached user-data (contains rke2_token), and journal.
+  - |
+    sleep 10
+    truncate -s 0 /var/log/cloud-init-output.log 2>/dev/null || true
+    truncate -s 0 /var/log/cloud-init.log 2>/dev/null || true
+    rm -f /var/lib/cloud/instance/user-data.txt 2>/dev/null || true
+    rm -f /var/lib/cloud/instance/scripts/runcmd 2>/dev/null || true
+    journalctl --vacuum-time=1s -u cloud-init 2>/dev/null || true

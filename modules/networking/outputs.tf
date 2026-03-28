@@ -38,6 +38,14 @@ output "private_lb_ip" {
   value       = hcloud_load_balancer_network.control_plane.ip
 }
 
+output "lb_service_ids" {
+  description = "IDs of the LB services (kube-api + rke2-supervisor). Referenced by wait_for_cluster to ensure services exist before health-checking the LB."
+  value = [
+    hcloud_load_balancer_service.kube_api.id,
+    hcloud_load_balancer_service.rke2_supervisor.id,
+  ]
+}
+
 output "firewall_id" {
   description = "ID of the cluster firewall. Null if enable_firewall=false."
   value       = var.enable_firewall ? hcloud_firewall.cluster[0].id : null
