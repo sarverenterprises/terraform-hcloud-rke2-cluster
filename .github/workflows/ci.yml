@@ -7,7 +7,7 @@ on:
 jobs:
   lint:
     name: Lint & Validate
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux]
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
@@ -42,7 +42,7 @@ jobs:
 
   security:
     name: Security Scan
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux]
     steps:
       - uses: actions/checkout@v4
       - name: Trivy IaC Scan
